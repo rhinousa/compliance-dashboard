@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Compliance Dashboard — Rhino USA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.spin{animation:spin .8s linear infinite;display:inline-block;width:13px;height:13px;border:2px solid #c7dcf8;border-top-color:#0073ea;border-radius:50%;vertical-align:middle;flex-shrink:0}
+
+/* Toolbar */
+.toolbar-group{display:flex;align-items:center;border:1.5px solid #c8cdd7;border-radius:8px;overflow:visible;background:#fff;flex-shrink:0}
+.tb{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;font-size:12px;font-weight:500;color:#444;background:#fff;border:none;border-right:1px solid #dde0e7;cursor:pointer;position:relative;white-space:nowrap;transition:all .15s;height:34px;line-height:1}
+.tb:last-child{border-right:none}.tb:first-child{border-radius:6px 0 0 6px}.tb:last-child{border-radius:0 6px 6px 0}.tb:only-child{border-radius:6px}
+.tb svg{flex-shrink:0;opacity:.65}.tb:hover{background:#f0f6ff;color:#0073ea}.tb:hover svg{opacity:1}.tb.on{background:#e8f2ff;color:#0073ea;font-weight:600}.tb.on svg{opacity:1}
+.dp{position:absolute;top:calc(100% + 8px);left:0;background:#fff;border:1.5px solid #dde0e7;border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.14);z-index:99;min-width:220px;padding:6px 0;animation:fadeDown .14s ease}
+.dpi{padding:8px 16px;font-size:12px;color:#333;cursor:pointer;display:flex;align-items:center;gap:8px}.dpi:hover{background:#f0f6ff;color:#0073ea}.dpi.sel{color:#0073ea;font-weight:600}
+.dps{height:1px;background:#eee;margin:4px 0}.dpl{padding:7px 16px 3px;font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.7px}
+.ir{cursor:pointer}.ir:hover{background:#f0f6ff!important}.sr{cursor:pointer}.sr:hover{background:#eef1ff!important}.gh:hover{background:#eaecf2!important}
+.comp-cell{transition:background .12s}.comp-cell:hover{background:#e8f4ff!important}
+.rpt{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#0073ea;padding:3px 8px;border-radius:4px;background:#e8f2ff;border:1px solid #c0d8f8;text-decoration:none;margin-top:4px}.rpt:hover{background:#d0e6ff}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.modal-wrap{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.modal-box{background:#fff;border-radius:12px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 16px 48px rgba(0,0,0,.22);animation:fadeDown .18s ease}
+.kpi-card{background:#fff;border:1.5px solid #e8eaed;border-radius:10px;padding:14px 18px;flex:1;min-width:140px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-pass::before{background:#00c875}.kpi-fail::before{background:#e2445c}.kpi-pending::before{background:#fdab3d}.kpi-total::before{background:#0073ea}
+/* pills */
+.cs-pill{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:12px;white-space:nowrap}
+.cs-yes{background:#e3f9ee;color:#0a7a46;border:1px solid #c3f0da}
+.cs-no{background:#f7f8fa;color:#aaa;border:1px solid #e0e0e0}
+/* priority badges */
+.p1b{background:#fff0f5;color:#c0125a;border:1px solid #ffc0d9;font-size:9px;padding:1px 6px;border-radius:20px;font-weight:700;white-space:nowrap;display:inline-block}
+.p2b{background:#fff8e0;color:#b07000;border:1px solid #fde8c0;font-size:9px;padding:1px 6px;border-radius:20px;font-weight:700;white-space:nowrap;display:inline-block}
+.p3b{background:#f0efff;color:#5b21b6;border:1px solid #d8d0f8;font-size:9px;padding:1px 6px;border-radius:20px;font-weight:700;white-space:nowrap;display:inline-block}
+.p4b{background:#f7f8fa;color:#666;border:1px solid #e0e0e0;font-size:9px;padding:1px 6px;border-radius:20px;font-weight:700;white-space:nowrap;display:inline-block}
+/* monitoring */
+.mon-ok{color:#0a7a46;font-weight:700}.mon-soon{color:#b07000;font-weight:700}.mon-over{color:#c0392b;font-weight:700;animation:pulse 2s infinite}.mon-none{color:#aaa}
+/* banners */
+.refresh-banner{background:#fff;border:1.5px solid #e0e3ea;border-radius:12px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.refresh-banner.ready{border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.04)}
+.refresh-banner.stale{border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.07)}
+.refresh-banner.loading{border-color:rgba(0,115,234,.35);background:rgba(0,115,234,.04)}
+.refresh-banner.done{border-color:rgba(0,200,117,.45);background:rgba(0,200,117,.05)}
+.refresh-banner.error{border-color:rgba(226,68,92,.4);background:rgba(226,68,92,.05)}
+.refresh-info{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.refresh-title{font-size:13px;font-weight:600;color:#222}.refresh-sub{font-size:11px;color:#888}
+.refresh-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;font-size:12px;font-weight:600;border-radius:7px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.refresh-btn.idle{background:#0073ea;color:#fff}.refresh-btn.idle:hover{background:#005cc8}
+.refresh-btn.loading{background:#e8f2ff;color:#0073ea;cursor:not-allowed;border:1px solid #c0d8f8}
+.refresh-btn.done{background:#e3f9ee;color:#0a7a46;cursor:pointer;border:1px solid #c3f0da}.refresh-btn.done:hover{background:#d0f5e0}
+.refresh-btn.error{background:#ffe8e8;color:#c0392b;cursor:pointer;border:1px solid #ffd5d5}
+.field-input{width:100%;padding:9px 12px;border:1.5px solid #c8cdd7;border-radius:7px;font-size:12px;color:#333;font-family:monospace;margin-top:5px;margin-bottom:12px}
+.field-input:focus{outline:none;border-color:#0073ea;box-shadow:0 0 0 3px rgba(0,115,234,.1)}
+.info-box{background:#f0f6ff;border:1px solid #c0d8f8;border-radius:7px;padding:10px 13px;font-size:11px;color:#0055bb;line-height:1.6;margin-bottom:12px}
+.warn-box{background:#fff8e0;border:1px solid #fde8c0;border-radius:7px;padding:10px 13px;font-size:11px;color:#7a5500;line-height:1.6;margin-bottom:14px}
+.sync-cta{display:inline-flex;align-items:center;gap:8px;background:#0073ea;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer}.sync-cta:hover{background:#005cc8}
+.tab-btn{padding:8px 16px;font-size:12px;background:none;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.65);font-weight:500;cursor:pointer;white-space:nowrap}
+.tab-btn.active{border-bottom-color:#fff;color:#fff;font-weight:700}
+/* search — kept out of innerHTML cycle so typing is uninterrupted */
+#search-wrap{position:relative;flex:1;min-width:160px;max-width:280px}
+#search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#aaa;pointer-events:none}
+#searchBox{width:100%;padding:6px 10px 6px 30px;border:1.5px solid #dde0e7;border-radius:7px;font-size:12px;background:#fafbfc;color:#333;outline:none;height:34px}
+#searchBox:focus{border-color:#0073ea}
+</style>
+</head>
+<body>
+
+<!-- ── STATIC SHELL (never re-rendered) ─────────────────────────────────── -->
+<div style="max-width:1400px;margin:0 auto;padding:0 20px 40px 20px">
+
+  <!-- Header (static) -->
+  <div style="background:#0073ea">
+    <div style="padding:12px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:20px">📋</span>
+        <span style="color:#fff;font-weight:700;font-size:15px" id="hdr-name">Compliance Dashboard</span>
+        <span style="color:rgba(255,255,255,.5);font-size:11px" id="hdr-sub">Rhino USA</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="hdr-acctBtn" style="display:none;align-items:center;gap:6px;color:rgba(255,255,255,.6);font-size:11px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#00c875;display:inline-block;flex-shrink:0"></span>Signed in with Google
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;margin-top:10px;padding:0 10px;border-top:1px solid rgba(255,255,255,.2)">
+      <button class="tab-btn active" id="tab-table" onclick="switchTab('table')">Main Table</button>
+      <button class="tab-btn" id="tab-monitoring" onclick="switchTab('monitoring')">Monitoring <span id="mon-badge" style="display:none;background:#e2445c;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px"></span></button>
+      <button class="tab-btn" id="tab-expense" onclick="switchTab('expense')">💰 Test Expense</button>
+    </div>
+  </div>
+
+  <!-- Sync banner (dynamic) -->
+  <div id="sync-banner-wrap" style="padding:10px 18px;background:#fafbfc;border-bottom:1px solid #e8eaed">
+    <div class="refresh-banner ready" id="banner">
+      <div class="refresh-info">
+        <div class="refresh-title" id="banner-title">Not connected</div>
+        <div class="refresh-sub" id="banner-sub">Connect your Google Sheet to load live data</div>
+        <div id="banner-progress" style="display:none;width:100%;height:3px;background:#e0e3ea;border-radius:2px;margin-top:8px;overflow:hidden"><div id="banner-bar" style="height:100%;background:#0073ea;border-radius:2px;width:0%;transition:width .4s ease"></div></div>
+      </div>
+      <button class="refresh-btn idle" id="syncBtn" onclick="triggerSync()">🔗 Connect &amp; Sync</button>
+    </div>
+  </div>
+
+  <!-- KPI (dynamic) -->
+  <div id="kpi-section"></div>
+
+  <!-- Toolbar (dynamic — only the filter/sort parts; search is static) -->
+  <!-- Toolbar: search + inline filter pills + sort -->
+  <div id="toolbar-wrap" style="display:none;background:#fff;border-left:0.5px solid #dde0e7;border-right:0.5px solid #dde0e7;border-bottom:1px solid #e8eaed;padding:10px 18px 8px;flex-direction:column;gap:0">
+    <!-- Row 1: Search + SKU + Sort + Clear -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <div id="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="searchBox" placeholder="Search products &amp; tests…" autocomplete="off" spellcheck="false" oninput="onSearch(this.value)"/>
+      </div>
+      <div style="position:relative;flex-shrink:0">
+        <select id="skuSelect" onchange="onSkuSelect(this.value)" style="padding:6px 28px 6px 10px;border:1.5px solid #dde0e7;border-radius:7px;font-size:12px;background:#fafbfc;color:#333;outline:none;height:34px;cursor:pointer;appearance:none;min-width:140px;max-width:200px">
+          <option value="">All SKUs</option>
+        </select>
+        <svg style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#888" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div style="position:relative">
+        <button class="tb" id="btn-sort" onclick="tDD('sort')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
+          <span>Sort</span><span id="sort-badge" style="display:none;background:#0073ea;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">1</span>
+        </button>
+        <div class="dp" id="dp-sort" style="display:none"></div>
+      </div>
+      <button id="clear-all-filters" onclick="clearAllFilters()" style="display:none;font-size:11px;color:#e2445c;background:none;border:1px solid #ffd5d5;cursor:pointer;font-weight:600;padding:4px 10px;border-radius:6px">&#10005; Clear all</button>
+    </div>
+    <!-- Filter rows -->
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:4px">
+      <!-- Country: pills (as-is) -->
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0">Country</span>
+        <div id="fp-country" style="display:flex;gap:4px;flex-wrap:nowrap"></div>
+      </div>
+      <!-- Group: compact select -->
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0">Group</span>
+        <div style="position:relative">
+          <select id="fp-group-sel" onchange="setFG(this.value)" style="padding:4px 28px 4px 10px;border:1.5px solid #dde0e7;border-radius:20px;font-size:11px;font-weight:600;background:#fff;color:#333;outline:none;height:30px;cursor:pointer;appearance:none;min-width:140px"></select>
+          <svg style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#888" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <!-- Priority: compact select -->
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0">Priority</span>
+        <div style="position:relative">
+          <select id="fp-priority-sel" onchange="setFP(this.value)" style="padding:4px 28px 4px 10px;border:1.5px solid #dde0e7;border-radius:20px;font-size:11px;font-weight:600;background:#fff;color:#333;outline:none;height:30px;cursor:pointer;appearance:none;min-width:110px"></select>
+          <svg style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#888" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <!-- Result: compact select -->
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0">Result</span>
+        <div style="position:relative">
+          <select id="fp-result-sel" onchange="setFR(this.value)" style="padding:4px 28px 4px 10px;border:1.5px solid #dde0e7;border-radius:20px;font-size:11px;font-weight:600;background:#fff;color:#333;outline:none;height:30px;cursor:pointer;appearance:none;min-width:100px"></select>
+          <svg style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:#888" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <!-- Date (as-is) -->
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0">Date</span>
+        <input type="date" id="date-from" onchange="setDateFrom(this.value)" style="padding:3px 8px;border:1.5px solid #dde0e7;border-radius:6px;font-size:11px;color:#333;outline:none;height:28px"/>
+        <span style="font-size:10px;color:#aaa">to</span>
+        <input type="date" id="date-to" onchange="setDateTo(this.value)" style="padding:3px 8px;border:1.5px solid #dde0e7;border-radius:6px;font-size:11px;color:#333;outline:none;height:28px"/>
+        <button id="clear-dates-btn" onclick="clearDates()" style="display:none;font-size:10px;color:#0073ea;background:none;border:none;cursor:pointer;padding:0">&#10005;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Board body (dynamic) -->
+  <div id="board-wrap"></div>
+</div>
+
+<!-- Modal container -->
+<div id="modal-root"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+// ▼▼▼ REQUIRED: fill these in before deploying ▼▼▼
+const GOOGLE_CLIENT_ID = "494765023704-ts4f0c3845oskpr0vpg1iu682adrbjva.apps.googleusercontent.com"; // Google Cloud Console → Credentials → OAuth client ID (type: Web application)
+const SPREADSHEET_ID   = "1eYfFCCz3OhwVcXhaQAXbHf7SsYs3Jef2FgDhVLxPLWc";           // From the sheet's URL: /d/{SPREADSHEET_ID}/edit
+// ▲▲▲ ──────────────────────────────────────────── ▲▲▲
+const ITEMS_SHEET      = "Items";      // tab name for the parent-product rows
+const SUBITEMS_SHEET   = "Subitems";   // tab name for the per-test rows
+const SHEET_EDIT_URL   = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit`;
+const SCOPES           = "https://www.googleapis.com/auth/spreadsheets.readonly";
+const LS_CACHE         = "rhino_compliance_gsheets_v1";
+const LS_SYNCED        = "rhino_compliance_gsheets_synced_v1";
+const DUE_SOON_DAYS    = 180; // 6 months
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let GROUPS = [];
+let searchQ = "", openDD = null, modal = null;
+let fCountry = "ALL", fResult = "ALL", fPriority = "ALL", fDateFrom = "", fDateTo = "", fSku = "", fGroup = "ALL", sortS = null;
+let activeTab = "table";
+let isSyncing = false, lastSynced = "Never", syncStatus = "ready";
+let syncProgress = 0, syncMsg = "";
+const gExp = {}, iExp = {};
+// Monitoring tab filters
+let monSearchQ = "", monFilterStatus = "ALL", monFilterDecision = "ALL", monFocusParent = "", monFilterPriority = "ALL";
+// Expense tab filters
+let expFilterPriority = "ALL", expFilterCategory = "ALL", expFilterYear = "ALL";
+
+// Retest decisions: keyed by itemId+subId → {decision:"now"|"next"|"", note:""}
+const LS_RETEST = "rhino_retest_decisions_v1";
+let retestDecisions = {};
+try{ retestDecisions = JSON.parse(localStorage.getItem(LS_RETEST)||"{}"); }catch(e){}
+
+function saveRetestDecision(key, decision){
+  retestDecisions[key] = decision;
+  localStorage.setItem(LS_RETEST, JSON.stringify(retestDecisions));
+}
+function getRetestDecision(itemId, subId){
+  return retestDecisions[itemId+"_"+subId]||"";
+}
+
+// ── GOOGLE OAUTH (Google Identity Services) ──────────────────────────────────
+let accessToken = null;
+let tokenClient = null;
+
+function initGis(){
+  if(tokenClient) return;
+  if(!window.google || !google.accounts || !google.accounts.oauth2){
+    setTimeout(initGis, 300); // gsi/client script still loading
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp)=>{
+      if(resp.error){
+        isSyncing=false;
+        setSyncUI("error","Google sign-in failed", resp.error==="access_denied"?"Access was denied.":String(resp.error),0);
+        return;
+      }
+      accessToken = resp.access_token;
+      fetchSheetData();
+    },
+  });
+}
+initGis();
+
+// Instead of trying to silently refresh in the background (unreliable — depends on
+// each browser/extension allowing a hidden Google session check, which many block),
+// we simply prompt the person with a real button to click. A genuine click always
+// works, since it's a normal user-initiated popup, not a background request.
+let lastSyncPromptAt = 0;
+const SYNC_PROMPT_COOLDOWN_MS = 4*60*1000; // don't ask again within 4 minutes of the last prompt
+
+function promptSync(){
+  if(!GROUPS.length || isSyncing || modal) return; // nothing cached yet, already syncing, or another dialog is open
+  const now=Date.now();
+  if(now-lastSyncPromptAt < SYNC_PROMPT_COOLDOWN_MS) return;
+  lastSyncPromptAt=now;
+  openModal({type:"syncPrompt"});
+}
+
+// Ask once shortly after opening the page (if there's cached data to potentially refresh),
+// again if the person switches back to this tab after being away, and periodically while
+// the tab stays open — all of these just show the same one-click prompt, never a silent attempt.
+setInterval(()=>{ promptSync(); }, SYNC_PROMPT_COOLDOWN_MS);
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState==="visible") promptSync();
+});
+
+// ── SYNC ─────────────────────────────────────────────────────────────────────
+let syncAttemptCounter=0;
+function triggerSync(){
+  if(isSyncing) return;
+  if(!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.indexOf("YOUR_")===0){
+    setSyncUI("error","Setup required","Add your Google OAuth Client ID (GOOGLE_CLIENT_ID) in the code before syncing.",0);
+    return;
+  }
+  isSyncing=true; setSyncUI("loading","Connecting to Google…","",15);
+  if(!tokenClient) initGis();
+  if(!tokenClient){
+    isSyncing=false;
+    setSyncUI("error","Not ready","Google sign-in library hasn't loaded yet. Check your connection and try again.",0);
+    return;
+  }
+  // Safety net: if the popup gets silently blocked by the browser and never opens,
+  // Google's callback may never fire at all — without this, the button would look
+  // dead (isSyncing stuck true) on every future click.
+  const syncAttemptId=++syncAttemptCounter;
+  setTimeout(()=>{
+    if(isSyncing && syncAttemptId===syncAttemptCounter){
+      isSyncing=false;
+      setSyncUI("error","Sign-in window didn't open","Your browser may have blocked the popup. Allow popups for this site and try again.",0);
+    }
+  }, 12000);
+  tokenClient.requestAccessToken({prompt: accessToken ? "" : "consent"});
+}
+
+async function fetchSheetData(){
+  try{
+    setSyncUI("loading","Fetching data from Google Sheets…","",45);
+    const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values:batchGet?ranges=${encodeURIComponent(ITEMS_SHEET)}&ranges=${encodeURIComponent(SUBITEMS_SHEET)}&valueRenderOption=FORMATTED_VALUE`;
+    const res=await fetch(url,{headers:{Authorization:"Bearer "+accessToken}});
+    if(res.status===401){
+      accessToken=null;
+      throw new Error("Session expired. Click Sync again to reconnect.");
+    }
+    if(!res.ok){
+      const errBody=await res.text();
+      throw new Error(`Sheets API ${res.status}: ${errBody.slice(0,200)}`);
+    }
+    const data=await res.json();
+    const itemsRange=data.valueRanges?.[0]?.values||[];
+    const subsRange=data.valueRanges?.[1]?.values||[];
+    if(!itemsRange.length) throw new Error(`No data found in the "${ITEMS_SHEET}" tab. Check the tab name matches ITEMS_SHEET in the code.`);
+
+    setSyncUI("loading","Building dashboard…","",80);
+    const itemRows=rowsToObjects(itemsRange);
+    const subRows=rowsToObjects(subsRange);
+    GROUPS=buildGroups(itemRows,subRows);
+    if(!GROUPS.length) throw new Error("Sheet returned 0 items.");
+
+    localStorage.setItem(LS_CACHE,JSON.stringify(GROUPS));
+    const ts=new Date().toISOString();
+    localStorage.setItem(LS_SYNCED,ts);
+    lastSynced=fmtDate(ts);
+    GROUPS.forEach(g=>{gExp[g.id]=true;g.items.forEach(i=>{iExp[i.id]=false;});});
+
+    isSyncing=false; syncStatus="done";
+    const ti=GROUPS.reduce((a,g)=>a+g.items.length,0);
+    const ts2=GROUPS.reduce((a,g)=>a+g.items.reduce((b,i)=>b+i.subs.length,0),0);
+    setSyncUI("done","Compliance Dashboard synced",`Last synced: ${lastSynced} · ${ti} products · ${ts2} test types`,100);
+    const acctBtn=document.getElementById("hdr-acctBtn");
+    if(acctBtn) acctBtn.style.display="inline-flex";
+    renderAll();
+  }catch(e){
+    isSyncing=false;
+    console.error(e);
+    setSyncUI("error","Sync failed",String(e.message||e).slice(0,220),0);
+  }
+}
+
+// ── SHEET ROW HELPERS ─────────────────────────────────────────────────────────
+// Turns [[header,header,...], [row,row,...], ...] into [{header:val,...}, ...]
+function rowsToObjects(rows){
+  if(!rows||!rows.length) return [];
+  const headers=rows[0].map(h=>String(h||"").trim());
+  const out=[];
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r];
+    if(!row||!row.length) continue;
+    const obj={}; let hasAny=false;
+    headers.forEach((h,i)=>{
+      if(!h) return;
+      const v=row[i]!==undefined?String(row[i]):"";
+      obj[h]=v;
+      if(v) hasAny=true;
+    });
+    if(hasAny) out.push(obj);
+  }
+  return out;
+}
+
+// ── BUILD DATA MODEL ─────────────────────────────────────────────────────────
+function buildGroups(itemRows, subRows){
+  // index subitems by parent item id
+  const subMap={};
+  subRows.forEach((row,idx)=>{
+    const pid=(row.parent_item_id||"").trim(); if(!pid) return;
+    if(!subMap[pid]) subMap[pid]=[];
+    const raw24=(row.y2024||"").trim(), raw25=(row.y2025||"").trim(), raw26=(row.y2026||"").trim();
+    const name=row.name||"";
+    const isTensile=/tensile|MBS|break strength/i.test(name);
+    // Tensile tests are required annually (12 months)
+    const freq = isTensile ? {months:12, label:"Annual (12 months)"} : parseFreq(row.labs||"");
+    const sid=(row.s||"").trim()||(pid+"_"+idx);
+    subMap[pid].push({
+      id:"s"+sid, rowId:sid, name,
+      std:row.std||"", criteria:row.criteria||"",
+      target:row.target||"", equipment:row.equipment||"",
+      accreditation:row.accreditation||"", labs:row.labs||"",
+      p24:parsePBlocks(raw24), p25:parsePBlocks(raw25), p26:parsePBlocks(raw26),
+      isTensile, freq,
+    });
+  });
+
+  const grpMap={};
+  itemRows.forEach(row=>{
+    const gtitle=(row.group||"Uncategorized").trim()||"Uncategorized";
+    const gid="g_"+gtitle.replace(/[^a-z0-9]+/gi,"_").toLowerCase();
+    if(!grpMap[gid]) grpMap[gid]={id:gid,title:gtitle,color:groupColor(gtitle),items:[]};
+
+    const rid=(row.id||"").trim();
+    const websiteUrl=extractWebsiteUrl(row.website||"","","");
+
+    grpMap[gid].items.push({
+      id:"i"+rid, rowId:rid, name:row.name||"",
+      url:SHEET_EDIT_URL,
+      parentSku:row.parentSku||"",
+      description:row.description||"",
+      prioritySku:row.prioritySku||"",
+      websiteUrl,
+      meetsClaim:row.meetsClaim||"",
+      mechTesting:row.mechTesting||"",
+      chemTesting:row.chemTesting||"",
+      corrTesting:row.corrTesting||"",
+      country:row.country||"",
+      colors:row.colors||"",
+      channel:row.channel||"",
+      subs:subMap[rid]||[],
+    });
+  });
+
+  applyReplication(Object.values(grpMap));
+  return Object.values(grpMap).filter(g=>g.items.length>0);
+}
+
+function extractWebsiteUrl(text, rawValue, directUrl){
+  // 1. Best source: LinkValue inline fragment url field — clean, no escaping needed
+  if(directUrl) return directUrl.replace(/&amp;/g,"&");
+  // 2. JSON value field: {"url":"...","text":"..."}
+  if(rawValue){try{const v=JSON.parse(rawValue);if(v?.url) return v.url.replace(/&amp;/g,"&");}catch(e){}}
+  // 3. Text format "Label text - https://url" — split on FIRST " - http"
+  if(text){
+    const i=text.indexOf(' - http');
+    if(i!==-1) return text.slice(i+3).trim().replace(/&amp;/g,"&");
+    const m=text.match(/https?:\/\/\S+/);
+    if(m) return m[0].replace(/&amp;/g,"&");
+  }
+  return "";
+}
+
+// ── PARENT SKU REPLICATION ────────────────────────────────────────────────────
+function applyReplication(groups){
+  const all=[];
+  groups.forEach(g=>g.items.forEach(i=>all.push(i)));
+  const byParent={};
+  all.forEach(i=>{
+    const key=i.parentSku||i.name;
+    if(!byParent[key]) byParent[key]=[];
+    byParent[key].push(i);
+  });
+  Object.values(byParent).forEach(siblings=>{
+    if(siblings.length<2) return;
+    const donor=siblings.reduce((best,cur)=>{
+      const cs=cur.subs.filter(s=>s.p24.length||s.p25.length||s.p26.length).length;
+      const bs=best.subs.filter(s=>s.p24.length||s.p25.length||s.p26.length).length;
+      return cs>bs?cur:best;
+    },siblings[0]);
+    if(!donor.subs.length) return;
+    siblings.forEach(item=>{
+      if(item.id===donor.id) return;
+      const hasData=item.subs.some(s=>s.p24.length||s.p25.length||s.p26.length);
+      if(!hasData){
+        item.subs=donor.subs.map(s=>({...s,_replicated:true,_replicatedFrom:donor.name}));
+        // replicate compliance fields
+        if(!item.meetsClaim)  item.meetsClaim=donor.meetsClaim;
+        if(!item.mechTesting) item.mechTesting=donor.mechTesting;
+        if(!item.chemTesting) item.chemTesting=donor.chemTesting;
+        if(!item.corrTesting) item.corrTesting=donor.corrTesting;
+        // replicate website
+        if(!item.websiteUrl)  item.websiteUrl=donor.websiteUrl;
+        // replicate prioritySku if blank
+        if(!item.prioritySku) item.prioritySku=donor.prioritySku;
+        item._replicatedFrom=donor.name;
+      }
+    });
+  });
+}
+
+// ── PRIORITY BLOCK PARSER ────────────────────────────────────────────────────
+function parsePBlocks(raw){
+  if(!raw||/^no\s*test$/i.test(raw.trim())||!raw.trim()) return [];
+  const parts=raw.split(/(?=(?:Priority Supplier|Supplier Priority)\s*\d+\s*:)/i);
+  const blocks=[];
+  parts.forEach(part=>{
+    part=part.trim(); if(!part) return;
+    const lines=part.split("\n").map(l=>l.trim()).filter(Boolean);
+    const hm=lines[0].match(/^(?:Priority Supplier|Supplier Priority)\s*(\d+)\s*:\s*(.*)$/i);
+    const priority=hm?parseInt(hm[1]):(blocks.length+1);
+    const supplierName=hm?hm[2].trim():"";
+    const get=k=>{const l=lines.find(x=>x.toLowerCase().startsWith(k.toLowerCase()));return l?l.replace(/^[^:]+:\s*/,"").trim():"";};
+    const getM=k=>{
+      const idx=lines.findIndex(x=>x.toLowerCase().startsWith(k.toLowerCase()));
+      if(idx===-1) return "";
+      let val=lines[idx].replace(/^[^:]+:\s*/,"").trim();
+      for(let i=idx+1;i<lines.length;i++){if(/^[A-Za-z][^:]{0,50}:/.test(lines[i])) break;val+=" "+lines[i];}
+      return val.trim();
+    };
+    // Extract ALL report-type lines — any line with a URL that has "report" in the key name
+    // Covers: Test Report, SAE Report, SAEJ684 Report, Initial Test Report, Final Test Report, etc.
+    const reports=[];
+    lines.forEach(line=>{
+      const m=line.match(/^([^:]{0,60}report[^:]{0,30})\s*:\s*(https?:\/\/\S+)/i);
+      if(m) reports.push({label:m[1].trim(), url:m[2].trim().replace(/&amp;/g,"&")});
+    });
+    // Fallback: if no labeled report lines found, grab first non-evidence URL
+    const evidenceVal=getM("Evidence");
+    const evidenceUrl=(evidenceVal.match(/https?:\/\/[^\s\n"')]+/)?.[0]||"").replace(/&amp;/g,"&");
+    if(!reports.length){
+      const allUrls=[...part.matchAll(/https?:\/\/[^\s\n"')]+/g)].map(m=>m[0].replace(/&amp;/g,"&"));
+      const fallbackUrl=allUrls.find(u=>u!==evidenceUrl)||null;
+      if(fallbackUrl) reports.push({label:"Report",url:fallbackUrl});
+    }
+
+    blocks.push({
+      priority,
+      supplier:supplierName||get("Supplier"),
+      method:get("Test Method")||get("Tensile Test Method")||get("Method"),
+      wwl:get("Rhino Test WWL")||get("WWL"),
+      claim:get("Rhino Break Strength Test Claim")||get("Break Claim"),
+      result:get("Test Result")||get("Result"),
+      date:get("Test Completion Date")||get("Test Completion")||get("Date"),
+      lab:get("Test Lab")||get("Lab"),
+      cost:get("Cost"),
+      reports,
+      report:reports[0]?.url||null,
+      cap:getM("Supplier CAP")||getM("CAP"),
+      evidence:evidenceVal,
+      remarks:getM("Remarks"),
+    });
+  });
+  if(!blocks.length){
+    // single block, no priority header
+    const lines=raw.split("\n").map(l=>l.trim()).filter(Boolean);
+    const get=k=>{const l=lines.find(x=>x.toLowerCase().startsWith(k.toLowerCase()));return l?l.replace(/^[^:]+:\s*/,"").trim():"";};
+    const getM=k=>{const idx=lines.findIndex(x=>x.toLowerCase().startsWith(k.toLowerCase()));if(idx===-1)return "";let val=lines[idx].replace(/^[^:]+:\s*/,"").trim();for(let i=idx+1;i<lines.length;i++){if(/^[A-Za-z][^:]{0,50}:/.test(lines[i]))break;val+=" "+lines[i];}return val.trim();};
+    const rl=lines.find(x=>/^test result/i.test(x));
+    const evidenceVal=getM("Evidence");
+    const evidenceUrl=evidenceVal.match(/https?:\/\/[^\s\n"')]+/)?.[0]||"";
+    const reports=[];
+    lines.forEach(line=>{
+      const m=line.match(/^([^:]{0,60}report[^:]{0,30})\s*:\s*(https?:\/\/\S+)/i);
+      if(m) reports.push({label:m[1].trim(),url:m[2].trim().replace(/&amp;/g,"&")});
+    });
+    if(!reports.length){
+      const rm=raw.match(/https?:\/\/[^\s\n"')]+/);
+      if(rm&&rm[0]!==evidenceUrl) reports.push({label:"Report",url:rm[0].replace(/&amp;/g,"&")});
+    }
+    blocks.push({priority:1,supplier:get("Supplier"),method:get("Test Method")||get("Tensile Test Method"),wwl:get("Rhino Test WWL"),claim:get("Rhino Break Strength Test Claim"),result:rl?rl.replace(/^[^:]+:\s*/,"").trim():get("Result"),date:get("Test Completion Date")||get("Test Completion")||get("Date"),lab:get("Test Lab"),cost:get("Cost"),reports,report:reports[0]?.url||null,cap:getM("Supplier CAP")||getM("CAP"),evidence:evidenceVal,remarks:getM("Remarks")});
+  }
+  return blocks;
+}
+
+function calcOverall(blocks){
+  if(!blocks||!blocks.length) return "notest";
+  const p1=blocks.find(b=>b.priority===1);
+  if(p1&&p1.result){
+    if(/\bFAIL\b/i.test(p1.result)) return "FAIL";
+    if(/\bPASS\b/i.test(p1.result)) return "PASS";
+  }
+  const anyFail=blocks.some(b=>/\bFAIL\b/i.test(b.result||""));
+  const anyPass=blocks.some(b=>/\bPASS\b/i.test(b.result||""));
+  if(anyFail&&!anyPass) return "FAIL";
+  if(anyPass) return "PASS";
+  return blocks[0]?.result?"data":"notest";
+}
+function bestResult(sub){
+  for(const k of ["p26","p25","p24"]){if(sub[k]&&sub[k].length) return calcOverall(sub[k]);}
+  return "notest";
+}
+
+// ── MONITORING HELPERS ────────────────────────────────────────────────────────
+function parseFreq(labsText){
+  // Look for frequency hints like "12 months", "annual", "6 months" in the labs field
+  const t=(labsText||"").toLowerCase();
+  const m=t.match(/(\d+)\s*month/i);
+  if(m) return {months:parseInt(m[1]),label:m[0]};
+  if(t.includes("annual")||t.includes("yearly")) return {months:12,label:"Annual (12 months)"};
+  if(t.includes("semi-annual")||t.includes("biannual")) return {months:6,label:"Semi-annual (6 months)"};
+  if(t.includes("quarterly")) return {months:3,label:"Quarterly (3 months)"};
+  return null;
+}
+function latestTestDate(sub){
+  let best=null;
+  for(const k of ["p26","p25","p24"]){
+    (sub[k]||[]).forEach(b=>{
+      const d=parseDate(b.date);
+      if(d&&(!best||d>best)) best=d;
+    });
+  }
+  return best;
+}
+function parseDate(s){
+  if(!s) return null;
+  // MM/DD/YYYY
+  const p=s.split("/"); if(p.length===3){const d=new Date(p[2],p[0]-1,p[1]);if(!isNaN(d)) return d;}
+  const d=new Date(s); return isNaN(d)?null:d;
+}
+function calcExpiry(sub, itemId){
+  const last=latestTestDate(sub); if(!last) return null;
+  const decision = itemId ? getRetestDecision(itemId, sub.id) : "";
+  // Rule: 2024 test → +2 years. 2025 onward → +1 year.
+  const lastYear=last.getFullYear();
+  const addYears = lastYear <= 2024 ? 2 : 1;
+  const standardDue=new Date(last);
+  standardDue.setFullYear(standardDue.getFullYear()+addYears);
+  if(decision==="next"){
+    // Defer: standard due + 12 months
+    const deferred=new Date(standardDue);
+    deferred.setMonth(deferred.getMonth()+12);
+    return deferred;
+  }
+  return standardDue;
+}
+function monStatus(sub, itemId){
+  const exp=calcExpiry(sub, itemId); if(!exp) return "none";
+  const decision = itemId ? getRetestDecision(itemId, sub.id) : "";
+  if(decision==="next") return "deferred";
+  const days=Math.round((exp-new Date())/(86400000));
+  if(days<0)   return "overdue";    // 🔴 past due date
+  if(days<=180) return "due_soon";  // 🟡 within 6 months
+  return "ok";                       // 🟢 more than 6 months away
+}
+function fmtD(d){return d?d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"—";}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function groupColor(t){
+  const tl=(t||"").toLowerCase();
+  if(tl.includes("tie")||tl.includes("strap")||tl.includes("ratchet")) return "#a358df";
+  if(tl.includes("recovery")||tl.includes("gear")||tl.includes("rope")) return "#00c875";
+  if(tl.includes("walmart")) return "#0073ea";
+  if(tl.includes("bungee")||tl.includes("eu")||tl.includes("uk")) return "#fdab3d";
+  const p=["#a358df","#00c875","#0073ea","#fdab3d","#e2445c","#037f4c","#ff642e"];
+  let h=0;for(const c of (t||"")) h=(h*31+c.charCodeAt(0))&0xffff;
+  return p[h%p.length];
+}
+function fmtDate(iso){return new Date(iso).toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});}
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// ── RENDER HELPERS ────────────────────────────────────────────────────────────
+function rb(r){
+  if(!r||r==="notest") return '<span style="color:#bbb;font-size:10px">—</span>';
+  const m={PASS:{bg:"#e3f9ee",c:"#0a7a46"},FAIL:{bg:"#ffe8e8",c:"#c0392b"},data:{bg:"#e8f2ff",c:"#0055bb"}};
+  const s=m[r]||m.data;
+  return `<span class="badge" style="background:${s.bg};color:${s.c}">${r==="data"?"Data":r}</span>`;
+}
+function cb(c){
+  const m={"US":{bg:"#e8f2ff",c:"#0055bb"},"EU":{bg:"#fff3e0",c:"#a05000"},"US/CA":{bg:"#e8f2ff",c:"#0055bb"}};
+  const s=m[c]||{bg:"#f0efef",c:"#555"};
+  return `<span class="badge" style="background:${s.bg};color:${s.c}">${esc(c)||"—"}</span>`;
+}
+function yb(val){
+  if(!val||val==="—"||val==="") return `<span class="cs-pill cs-no">—</span>`;
+  if(/^yes/i.test(val)) return `<span class="cs-pill cs-yes">✓ ${esc(val)}</span>`;
+  if(/^no$/i.test(val)) return `<span class="cs-pill cs-no">✗ No</span>`;
+  return `<span class="cs-pill cs-yes">${esc(val)}</span>`;
+}
+// Clipped version for table cells — truncates long text with ellipsis
+function ybClip(val){
+  if(!val||val==="—"||val==="") return `<span class="cs-pill cs-no">—</span>`;
+  const isYes=/^yes/i.test(val);
+  const isNo=/^no$/i.test(val);
+  const cls=isNo?"cs-no":"cs-yes";
+  const prefix=isYes?"✓ ":isNo?"✗ ":"";
+  const text=isNo?"No":val;
+  return `<span class="cs-pill ${cls}" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex" title="${esc(text)}">${prefix}${esc(text)}</span>`;
+}
+function pBadge(p){return `<span class="p${Math.min(p,4)}b">P${p}</span>`;}
+
+function ycell(blocks){
+  if(!blocks||!blocks.length) return '<span style="color:#ddd;font-size:10px">—</span>';
+  const overall=calcOverall(blocks);
+  const ip=/^PASS$/i.test(overall), ifl=/^FAIL$/i.test(overall);
+  const oc=ifl?"#c0392b":ip?"#0a7a46":"#555";
+  let h=`<div style="font-size:10px;line-height:1.5;color:#222">`;
+  if(blocks.length>1){
+    h+=`<div style="display:inline-flex;align-items:center;gap:4px;background:${ip?"#e3f9ee":ifl?"#ffe8e8":"#f7f8fa"};border:1px solid ${ip?"#c3f0da":ifl?"#ffd5d5":"#e0e0e0"};border-radius:4px;padding:2px 7px;margin-bottom:5px;font-size:9px;font-weight:700;color:${oc}">Overall (P1 Rule): ${overall}</div>`;
+  }
+  blocks.forEach((b,idx)=>{
+    const bp=/\bPASS\b/i.test(b.result||""), bf=/\bFAIL\b/i.test(b.result||"");
+    const bc=bf?"#c0392b":bp?"#0a7a46":"#555";
+    if(idx>0) h+=`<div style="margin-top:5px;padding-top:5px;border-top:0.5px dashed #e0e0e0">`;
+    h+=`<div style="display:flex;align-items:flex-start;gap:4px;margin-bottom:2px">${pBadge(b.priority)}`;
+    if(b.supplier) h+=`<span style="font-weight:600;font-size:10px">${esc(b.supplier)}</span>`;
+    h+=`</div>`;
+    if(b.result) h+=`<div style="color:${bc};font-weight:700;margin-bottom:2px;font-size:10px">${esc(b.result)}</div>`;
+    if(b.wwl) h+=`<div style="color:#666;font-size:9px">WWL: ${esc(b.wwl)}${b.claim?" | Claim: "+esc(b.claim):""}</div>`;
+    if(b.date||b.lab) h+=`<div style="color:#888;font-size:9px">${[b.date,b.lab].filter(Boolean).join(" · ")}</div>`;
+    // Render all report links as labeled buttons
+    const reportList=b.reports&&b.reports.length?b.reports:(b.report?[{label:"Report",url:b.report}]:[]);
+    reportList.forEach(r=>{
+      // Use onclick window.open as fallback for environments where href clicks are blocked
+      const cleanUrl=r.url.replace(/&amp;/g,"&");
+      h+=`<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="rpt" onclick="event.stopPropagation()" title="${esc(r.label)}">📄 ${esc(r.label)} ↗</a>`;
+    });
+    if(b.cap) h+=`<div style="margin-top:3px;padding:3px 6px;background:#fff8e0;border-left:2px solid #fdab3d;border-radius:0 3px 3px 0;font-size:9px"><span style="font-weight:700;color:#b07000">CAP:</span> ${esc(b.cap)}</div>`;
+    if(b.evidence){
+      const evUrl=(b.evidence.match(/https?:\/\/[^\s\n"')]+/)?.[0]||"").replace(/&amp;/g,"&");
+      const evText=b.evidence.replace(/https?:\/\/[^\s\n"')]+/g,"").trim();
+      h+=`<div style="margin-top:3px;padding:3px 6px;background:#f0f9ff;border-left:2px solid #0073ea;border-radius:0 3px 3px 0;font-size:9px">
+        <span style="font-weight:700;color:#0055bb">Evidence:</span>
+        ${evText?` ${esc(evText)}`:""}
+        ${evUrl?`<a href="${evUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();window.open('${evUrl.replace(/'/g,"\\'")}','_blank')" style="display:inline-flex;align-items:center;gap:2px;color:#0073ea;font-weight:600;text-decoration:none;margin-left:3px">🔗 View ↗</a>`:""}
+      </div>`;
+    }
+    if(b.remarks) h+=`<div style="margin-top:3px;padding:3px 6px;background:#f7f0ff;border-left:2px solid #7c3aed;border-radius:0 3px 3px 0;font-size:9px"><span style="font-weight:700;color:#5b21b6">Remarks:</span> ${esc(b.remarks)}</div>`;
+    if(idx>0) h+=`</div>`;
+  });
+  return h+"</div>";
+}
+
+// ── FILTER / SORT ─────────────────────────────────────────────────────────────
+function matchF(item){
+  if(fCountry!=="ALL"&&item.country!==fCountry) return false;
+  if(fResult!=="ALL"&&!item.subs.some(s=>bestResult(s)===fResult)) return false;
+  if(fPriority!=="ALL"&&item.prioritySku!==fPriority) return false;
+  if(fSku&&item.id!=="i"+fSku&&item.name!==fSku) return false;
+  if(fGroup!=="ALL"){
+    // find which group this item belongs to
+    let itemGroup="";
+    GROUPS.forEach(g=>g.items.forEach(i=>{if(i.id===item.id) itemGroup=g.title;}));
+    if(itemGroup!==fGroup) return false;
+  }
+  if(fDateFrom||fDateTo){
+    const from=fDateFrom?new Date(fDateFrom):null;
+    const to=fDateTo?new Date(fDateTo):null;
+    // match if any test date in any year block falls within range
+    const hasMatch=item.subs.some(sub=>{
+      const dates=[];
+      [sub.p24,sub.p25,sub.p26].forEach(blocks=>(blocks||[]).forEach(b=>{
+        const d=parseDate(b.date); if(d) dates.push(d);
+      }));
+      return dates.some(d=>(!from||d>=from)&&(!to||d<=to));
+    });
+    if(!hasMatch) return false;
+  }
+  if(searchQ){
+    const q=searchQ.toLowerCase();
+    // Build a comprehensive haystack — name, description, parentSku, all skus, subs
+    const haystack=[
+      item.name,
+      item.description,
+      item.parentSku,
+      item.prioritySku,
+      item.country,
+      item.channel,
+      item.colors,
+      item.mechTesting,
+      item.chemTesting,
+      item.corrTesting,
+      item.meetsClaim,
+      // Also search each word segment of the name (e.g. "HDKIT" matches "HDKIT-4PK-GRN")
+      ...item.name.split(/[-_\s]/),
+      ...item.subs.map(s=>s.name+" "+s.std+" "+s.criteria)
+    ].join(" ").toLowerCase();
+    if(!haystack.includes(q)) return false;
+  }
+  return true;
+}
+function getVis(){
+  let all=[];
+  GROUPS.forEach(g=>g.items.forEach(i=>all.push({...i,_gid:g.id,_gtitle:g.title,_gc:g.color})));
+  all=all.filter(matchF);
+  if(sortS) all.sort((a,b)=>{
+    const av=(a[sortS.col]||"").toLowerCase(),bv=(b[sortS.col]||"").toLowerCase();
+    return sortS.dir==="asc"?av.localeCompare(bv):bv.localeCompare(av);
+  });
+  return all;
+}
+function groupVis(items){
+  const m={};
+  items.forEach(i=>{if(!m[i._gid])m[i._gid]={id:i._gid,title:i._gtitle,color:i._gc,items:[]};m[i._gid].items.push(i);});
+  return Object.values(m);
+}
+
+// ── KPI ───────────────────────────────────────────────────────────────────────
+function calcKPIs(){
+  let pass=0,fail=0,notest=0,overdue=0,dueSoon=0;
+
+  // Per-priority completion: count at ITEM level
+  // Priority SKU values: A, B, C, Retail (exact values from monday board)
+  const priGroups={A:{done:0,total:0},B:{done:0,total:0},C:{done:0,total:0},Retail:{done:0,total:0}};
+
+  GROUPS.forEach(g=>g.items.forEach(item=>{
+    const pri=(item.prioritySku||"").trim(); // exact value from board: A, B, C, Retail
+    // Simple rule: item has ANY subtest with data = 1 tested SKU
+    // Replicated items also count — they share verified test data
+    const hasDone = item.subs.length > 0 && item.subs.some(s=>
+      (s.p24&&s.p24.length>0)||(s.p25&&s.p25.length>0)||(s.p26&&s.p26.length>0)
+    );
+
+    // Match case-insensitively against known tiers
+    const priKey=Object.keys(priGroups).find(k=>k.toLowerCase()===pri.toLowerCase());
+    if(priKey){
+      priGroups[priKey].total++;
+      if(hasDone) priGroups[priKey].done++;
+    }
+
+    item.subs.forEach(sub=>{
+      const r=bestResult(sub);
+      if(r==="PASS") pass++; else if(r==="FAIL") fail++; else notest++;
+      if((sub.p24&&sub.p24.length>0)||(sub.p25&&sub.p25.length>0)||(sub.p26&&sub.p26.length>0)){
+        const ms=monStatus(sub,item.id);
+        if(ms==="overdue") overdue++;
+        else if(ms==="due_soon") dueSoon++;
+      }
+    });
+  }));
+
+  // Completion rate per group
+  const priRate=(g)=>g.total>0?Math.round(g.done/g.total*100):null;
+
+  const completed=pass+fail,total=completed+notest;
+  const rate=completed>0?Math.round(pass/completed*100):null;
+  return{pass,fail,notest,completed,total,rate,overdue,dueSoon,priGroups,priRate};
+}
+
+// ── SYNC UI UPDATE (no full re-render) ────────────────────────────────────────
+function setSyncUI(status,title,sub,progress){
+  syncStatus=status; syncMsg=sub; syncProgress=progress;
+  const banner=document.getElementById("banner");
+  const btn=document.getElementById("syncBtn");
+  if(!banner||!btn) return;
+  banner.className="refresh-banner "+status;
+  document.getElementById("banner-title").textContent=title;
+  document.getElementById("banner-sub").textContent=sub;
+  const prog=document.getElementById("banner-progress");
+  const bar=document.getElementById("banner-bar");
+  if(progress>0&&status==="loading"){prog.style.display="block";bar.style.width=progress+"%";}
+  else{prog.style.display="none";}
+  const btnStates={
+    ready:{cls:"idle",txt:"🔗 Connect &amp; Sync",disabled:false},
+    loading:{cls:"loading",txt:"Syncing…",disabled:true},
+    done:{cls:"done",txt:"✓ Re-sync",disabled:false},
+    stale:{cls:"done",txt:"✓ Re-sync",disabled:false},
+    error:{cls:"error",txt:"↻ Retry",disabled:false},
+  };
+  const bs=btnStates[status]||btnStates.ready;
+  btn.className="refresh-btn "+bs.cls;
+  btn.innerHTML=status==="loading"?`<span class="spin"></span> Syncing…`:bs.txt;
+  btn.disabled=bs.disabled;
+}
+
+// ── MAIN RENDER ───────────────────────────────────────────────────────────────
+function renderAll(){
+  updateHeader();
+  renderKPI();
+  renderToolbar();
+  if(activeTab==="table") renderTable();
+  else renderMonitoring();
+  renderModals();
+}
+
+function updateHeader(){
+  const ti=GROUPS.reduce((a,g)=>a+g.items.length,0);
+  const ts=GROUPS.reduce((a,g)=>a+g.items.reduce((b,i)=>b+i.subs.length,0),0);
+  document.getElementById("hdr-sub").textContent=`Rhino USA${ti?" · "+ti+" products · "+ts+" test types":""}`;
+  const acctBtn=document.getElementById("hdr-acctBtn");
+  if(acctBtn) acctBtn.style.display=accessToken?"inline-flex":"none";
+  // monitoring badge
+  const kpi=calcKPIs();
+  const badge=document.getElementById("mon-badge");
+  const n=kpi.overdue+kpi.dueSoon;
+  if(n>0){badge.style.display="inline";badge.textContent=n;}
+  else badge.style.display="none";
+}
+
+function renderKPI(){
+  const el=document.getElementById("kpi-section"); if(!el) return;
+  if(!GROUPS.length){el.innerHTML="";return;}
+  const kpi=calcKPIs();
+  const rc=kpi.rate===null?"#888":kpi.rate>=80?"#0a7a46":kpi.rate>=60?"#b07000":"#c0392b";
+
+  // Priority SKU completion rate helper
+  const priCard=(key,label,color,borderColor,highlight=false)=>{
+    const g=kpi.priGroups[key];
+    const rate=kpi.priRate(g);
+    const rateColor=rate===null?"#aaa":rate>=80?"#0a7a46":rate>=60?"#b07000":"#c0392b";
+    const barW=rate||0;
+    return `<div style="flex:1;min-width:120px;background:#fff;border:${highlight?"2.5px":"1.5px"} solid ${highlight?color:borderColor};border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;${highlight?`box-shadow:0 4px 14px ${color}33;`:""}">
+      <div style="position:absolute;top:0;left:0;right:0;height:${highlight?"5px":"3px"};background:${color}"></div>
+      ${highlight?`<div style="position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;color:#fff;background:${color};padding:1px 6px;border-radius:10px">★ Priority</div>`:""}
+      <div style="font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${label}</div>
+      <div style="font-size:26px;font-weight:700;color:${rateColor};margin-bottom:2px">${rate!==null?rate+"%":"N/A"}</div>
+      <div style="height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;margin:5px 0 6px">
+        <div style="height:100%;background:${rateColor};border-radius:2px;width:${barW}%;transition:width .4s ease"></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:${rateColor}">${g.done} / ${g.total} SKU</div>
+      <div style="font-size:9px;color:#aaa;margin-top:2px">SKU completion rate</div>
+    </div>`;
+  };
+
+  el.innerHTML=`<div style="padding:14px 18px 16px;background:#fff;border-bottom:1px solid #e8eaed">
+    <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Executive KPI Summary · P1 Supplier Rule</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div class="kpi-card kpi-pass" style="border-color:#c3f0da;flex:2;min-width:220px">
+        <div style="font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Compliance Rate (P1 Governs)</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+          <span style="font-size:32px;font-weight:700;color:${rc}">${kpi.rate!==null?kpi.rate+"%":"N/A"}</span>
+          <span style="font-size:11px;color:#888">of completed tests passed</span>
+        </div>
+        <div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;margin:6px 0 4px">
+          <div style="height:100%;background:${rc};border-radius:3px;width:${kpi.rate||0}%;transition:width .4s ease"></div>
+        </div>
+        <div style="font-size:10px;color:#666">${kpi.pass} PASS · ${kpi.fail} FAIL · ${kpi.notest} pending</div>
+      </div>
+      <div class="kpi-card kpi-pass" style="min-width:100px;max-width:130px;border-color:#c3f0da"><div style="font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Passed</div><div style="font-size:30px;font-weight:700;color:#0a7a46">${kpi.pass}</div><div style="font-size:10px;color:#888;margin-top:3px">subtests</div></div>
+      <div class="kpi-card kpi-fail" style="min-width:100px;max-width:130px;border-color:#ffd5d5"><div style="font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Failed</div><div style="font-size:30px;font-weight:700;color:#c0392b">${kpi.fail}</div><div style="font-size:10px;color:#888;margin-top:3px">subtests</div></div>
+      <div class="kpi-card kpi-pending" style="min-width:100px;max-width:140px;border-color:#fde8c0"><div style="font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">A SKU No Test</div><div style="font-size:30px;font-weight:700;color:#b07000">${kpi.priGroups.A.total-kpi.priGroups.A.done}</div><div style="font-size:10px;color:#888;margin-top:3px">of ${kpi.priGroups.A.total} A SKUs untested</div></div>
+      <div class="kpi-card kpi-total" style="min-width:120px;max-width:160px;border-color:${kpi.overdue?"#ffc0c0":"#c0d8f8"}"><div style="font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Monitoring</div>
+        ${kpi.overdue?`<div style="font-size:14px;font-weight:700;color:#c0392b;margin-bottom:2px">🔴 ${kpi.overdue} Overdue</div>`:""}
+        ${kpi.dueSoon?`<div style="font-size:13px;font-weight:700;color:#b07000;margin-bottom:2px">🟡 ${kpi.dueSoon} Due Soon</div>`:""}
+        ${!kpi.overdue&&!kpi.dueSoon?`<div style="font-size:13px;font-weight:700;color:#0a7a46">🟢 All on track</div>`:""}
+        <button onclick="switchTab('monitoring')" style="margin-top:6px;font-size:10px;color:#0073ea;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">View schedule →</button>
+      </div>
+    </div>
+
+    <!-- SKU Priority Completion Rates -->
+    <div style="border-top:1px solid #f0f0f0;padding-top:12px">
+      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">SKU Completion Rate — Tests Done vs Total Required</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${priCard("Retail","Retail SKU","#00c875","#c3f0da",true)}
+        ${priCard("A","A SKU","#0073ea","#c0d8f8",true)}
+        ${priCard("B","B SKU","#fdab3d","#fde8c0",false)}
+        ${priCard("C","C SKU","#a358df","#d8b4fe",false)}
+      </div>
+      <div style="font-size:9px;color:#aaa;margin-top:8px">Completion = SKU items with any test data ÷ total SKU items · A / B / C / Retail are Priority SKU values from the Items sheet · Replicated SKUs counted as tested</div>
+    </div>
+  </div>`;
+}
+
+function renderToolbar(){
+  const wrap=document.getElementById("toolbar-wrap"); if(!wrap) return;
+  if(!GROUPS.length){wrap.style.display="none";return;}
+  wrap.style.display="flex";
+
+  // Populate SKU dropdown
+  const skuSel=document.getElementById("skuSelect");
+  if(skuSel){
+    const allNames=[...new Set(GROUPS.flatMap(g=>g.items.map(i=>i.name)))].sort();
+    skuSel.innerHTML=`<option value="">All SKUs</option>`+allNames.map(n=>`<option value="${esc(n)}" ${fSku===n?"selected":""}>${esc(n)}</option>`).join("");
+  }
+  // Sync date inputs
+  const df=document.getElementById("date-from"); if(df) df.value=fDateFrom;
+  const dt=document.getElementById("date-to"); if(dt) dt.value=fDateTo;
+  const cdb=document.getElementById("clear-dates-btn"); if(cdb) cdb.style.display=(fDateFrom||fDateTo)?"inline":"none";
+
+  // Pill helper
+  const pill=(v,label,active,fn)=>`<button onclick="${fn}" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid ${active?"#0073ea":"#e0e3ea"};background:${active?"#0073ea":"#fff"};color:${active?"#fff":"#555"}">${label}</button>`;
+
+  // Country pills
+  const ce=document.getElementById("fp-country");
+  if(ce) ce.innerHTML=["ALL","US","US/CA","US/EU","EU"].map(v=>pill(v,v==="ALL"?"All":v,fCountry===v,`setFC('${v}')`)).join("");
+
+  // Group select (dynamic)
+  const groupNames=[...new Set(GROUPS.map(g=>g.title))].sort();
+  const ge=document.getElementById("fp-group-sel");
+  if(ge){
+    ge.innerHTML=[["ALL","All Groups"],...groupNames.map(v=>[v,v])].map(([v,l])=>`<option value="${esc(v)}" ${fGroup===v?"selected":""}>${esc(l)}</option>`).join("");
+    ge.style.borderColor=fGroup!=="ALL"?"#0073ea":"#dde0e7";
+    ge.style.color=fGroup!=="ALL"?"#0073ea":"#333";
+    ge.style.fontWeight=fGroup!=="ALL"?"700":"600";
+  }
+
+  // Priority select
+  const pe=document.getElementById("fp-priority-sel");
+  if(pe){
+    pe.innerHTML=[["ALL","All Priorities"],["Retail","★ Retail"],["A","A SKU"],["B","B SKU"],["C","C SKU"],["NPD","NPD"]].map(([v,l])=>`<option value="${v}" ${fPriority===v?"selected":""}>${l}</option>`).join("");
+    pe.style.borderColor=fPriority!=="ALL"?"#0073ea":"#dde0e7";
+    pe.style.color=fPriority!=="ALL"?"#0073ea":"#333";
+    pe.style.fontWeight=fPriority!=="ALL"?"700":"600";
+  }
+
+  // Result select
+  const re=document.getElementById("fp-result-sel");
+  if(re){
+    re.innerHTML=[["ALL","All Results"],["PASS","PASS"],["FAIL","FAIL"],["notest","No Test"]].map(([v,l])=>`<option value="${v}" ${fResult===v?"selected":""}>${l}</option>`).join("");
+    re.style.borderColor=fResult!=="ALL"?"#0073ea":"#dde0e7";
+    re.style.color=fResult!=="ALL"?"#0073ea":"#333";
+    re.style.fontWeight=fResult!=="ALL"?"700":"600";
+  }
+
+  // Clear All button
+  const af=(fCountry!=="ALL"?1:0)+(fResult!=="ALL"?1:0)+(fPriority!=="ALL"?1:0)+(fGroup!=="ALL"?1:0)+((fDateFrom||fDateTo)?1:0)+(fSku?1:0);
+  const cab=document.getElementById("clear-all-filters"); if(cab) cab.style.display=af>0?"inline-flex":"none";
+
+  // Sort badge
+  const sb=document.getElementById("sort-badge");
+  if(sortS){if(sb)sb.style.display="inline";document.getElementById("btn-sort")?.classList.add("on");}
+  else{if(sb)sb.style.display="none";document.getElementById("btn-sort")?.classList.remove("on");}
+
+  renderDropdowns();
+}
+
+function clearAllFilters(){ fCountry="ALL";fResult="ALL";fPriority="ALL";fGroup="ALL";fDateFrom="";fDateTo="";fSku="";onSkuSelect(""); renderAll(); }
+
+
+function renderDropdowns(){
+  const dps=document.getElementById("dp-sort");
+  if(!dps) return;
+
+  if(openDD==="sort"){
+    dps.style.display="block";
+    const opts=[["name","Product Name"],["prioritySku","Priority SKU"],["country","Country"],["channel","Channel"],["colors","Report Colors"]];
+    dps.innerHTML=`
+      <div class="dpl">Sort by</div>
+      ${opts.map(([c,l])=>`<div class="dpi ${sortS?.col===c?"sel":""}" onclick="setSort('${c}')">${sortS?.col===c?(sortS.dir==="asc"?"↑ ":"↓ "):"· "} ${l}</div>`).join("")}
+      ${sortS?`<div class="dps"></div><div class="dpi" onclick="clearSort()" style="color:#e2445c;font-size:11px">✕ Clear sort</div>`:""}`;
+  } else dps.style.display="none";
+}
+
+// ── TABLE TAB ─────────────────────────────────────────────────────────────────
+function renderTable(){
+  const wrap=document.getElementById("board-wrap"); if(!wrap) return;
+  const vis=getVis(), grouped=groupVis(vis);
+
+  if(!GROUPS.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:64px 24px"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:16px;font-weight:600;color:#333;margin-bottom:8px">No data loaded yet</div><div style="font-size:12px;color:#888;line-height:1.6;max-width:400px;margin:0 auto 24px">Click "Connect &amp; Sync" to fetch live data from your Google Sheet.</div><button class="sync-cta" onclick="triggerSync()">🔗 Connect &amp; Sync</button></div>`;
+    return;
+  }
+  if(!grouped.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:48px;color:#aaa"><div style="font-size:28px;margin-bottom:8px">🔍</div><div style="font-size:13px">No items match current filters</div></div>`;
+    return;
+  }
+
+  // grid — Priority and Annual Test narrower, Compliance Summary wider
+  const mg="minmax(0,2fr) 54px 100px minmax(0,280px) 72px minmax(0,130px) 70px";
+  const sg="minmax(0,1.5fr) minmax(0,120px) 70px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)";
+  const mHdrs=["Product / SKU","Pri","Annual Test","Compliance Summary","Country","Channel","Colors"];
+  const sHdrs=["Test Type","Standard","Result","2024","2025","2026"];
+
+  let html="";
+  grouped.forEach(grp=>{
+    const gOpen=gExp[grp.id]!==false;
+    html+=`<div style="margin-bottom:4px">
+      <div class="gh" onclick="toggleGroup('${grp.id}')" style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:#f2f3f6;cursor:pointer;border-bottom:0.5px solid #e0e0e0;user-select:none">
+        <span style="font-size:11px;color:#888;display:inline-block;transform:rotate(${gOpen?0:-90}deg);transition:transform .15s">▾</span>
+        <div style="width:10px;height:10px;border-radius:50%;background:${grp.color}"></div>
+        <span style="font-size:13px;font-weight:600;color:#333">${esc(grp.title)}</span>
+        <span style="font-size:11px;color:#888;background:#fff;border:1px solid #dde0e7;border-radius:20px;padding:1px 9px">${grp.items.length} item${grp.items.length!==1?"s":""}</span>
+      </div>`;
+
+    if(gOpen){
+      html+=`<div style="display:grid;grid-template-columns:${mg};background:#f8f9fb;border-bottom:0.5px solid #e0e0e0">
+        ${mHdrs.map((h,i)=>`<div style="padding:5px 10px 5px ${i===0?"44px":"10px"};font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-right:0.5px solid #e8eaed;overflow:hidden">${h}</div>`).join("")}
+      </div>`;
+
+      grp.items.forEach(item=>{
+        const iOpen=iExp[item.id]!==false;
+
+        // Annual Test — ANY subtest with data in ANY year triggers annual retest tracking
+        const subsWithData=item.subs.filter(s=>
+          (s.p24&&s.p24.length>0)||(s.p25&&s.p25.length>0)||(s.p26&&s.p26.length>0)
+        );
+        let annualCell=`<span style="color:#ddd;font-size:10px">—</span>`;
+        if(subsWithData.length>0){
+          const subStatuses=subsWithData.map(s=>({
+            sub:s,
+            decision:getRetestDecision(item.id,s.id),
+            last:latestTestDate(s)
+          }));
+          const anyDue=subStatuses.some(s=>s.decision!=="next");
+          const allDeferred=subStatuses.every(s=>s.decision==="next");
+          const dueOnes=subStatuses.filter(s=>s.decision!=="next");
+          const referenceList=anyDue?dueOnes:subStatuses;
+          const earliestLast=referenceList.reduce((min,s)=>(s.last&&(!min||s.last<min))?s.last:min,null);
+          const lastYear=earliestLast?earliestLast.getFullYear():null;
+          const addYears=lastYear&&lastYear<=2024?2:1;
+          const retestYear=lastYear?lastYear+addYears:"—";
+          const standardDue=earliestLast?new Date(new Date(earliestLast).setFullYear(earliestLast.getFullYear()+addYears)):null;
+          const deferDate=standardDue?new Date(new Date(standardDue).setMonth(standardDue.getMonth()+12)):null;
+          const deferLabel=deferDate?fmtD(deferDate):"next cycle";
+          const countLabel=subsWithData.length>1?`<div style="color:#888;font-size:8px">${subsWithData.length} tests tracked</div>`:"";
+
+          if(allDeferred){
+            annualCell=`<div style="font-size:9px;line-height:1.6">
+              <div style="display:inline-flex;align-items:center;gap:3px;background:#f0f6ff;border:1px solid #c0d8f8;border-radius:4px;padding:2px 6px;font-weight:700;color:#0055bb;margin-bottom:2px">🔵 Deferred</div>
+              ${earliestLast?`<div style="color:#888;font-size:8px">Next due: ${deferLabel}</div>`:""}
+              ${countLabel}
+              <button onclick="event.stopPropagation();viewInMonitoring('${item.parentSku||item.rowId}')" style="font-size:8px;color:#0073ea;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;display:block">View in Monitoring →</button>
+            </div>`;
+          } else {
+            const worstMs = dueOnes.length>0
+              ? dueOnes.reduce((w,s)=>{
+                  const ms=monStatus(s.sub,item.id);
+                  const order={overdue:0,due_soon:1,ok:2};
+                  return (order[ms]??3)<(order[w]??3)?ms:w;
+                },"ok")
+              : "ok";
+            const daysLeft=standardDue?Math.round((standardDue-new Date())/86400000):null;
+            const daysText=daysLeft===null?"":daysLeft<0?`${Math.abs(daysLeft)}d overdue`:daysLeft===0?"Today":`${daysLeft}d left`;
+
+            const cfg={
+              overdue: {bg:"#fff0f0",border:"#ffc0c0",color:"#c0392b",icon:"🔴",label:`Retest Due ${retestYear}`},
+              due_soon:{bg:"#fffdf0",border:"#fde8c0",color:"#b07000",icon:"🟡",label:`Due Soon · ${retestYear}`},
+              ok:      {bg:"#f0fff8",border:"#c3f0da",color:"#0a7a46",icon:"🟢",label:`On Track · ${retestYear}`},
+            }[worstMs]||{bg:"#fff0f0",border:"#ffc0c0",color:"#c0392b",icon:"🔴",label:`Retest Due ${retestYear}`};
+
+            annualCell=`<div style="font-size:9px;line-height:1.6">
+              <div style="display:inline-flex;align-items:center;gap:3px;background:${cfg.bg};border:1px solid ${cfg.border};border-radius:4px;padding:2px 6px;font-weight:700;color:${cfg.color};margin-bottom:2px">${cfg.icon} ${cfg.label}</div>
+              ${earliestLast?`<div style="color:#888;font-size:8px">Last: ${fmtD(earliestLast)}</div>`:""}
+              ${daysText?`<div style="color:${worstMs==="overdue"?"#c0392b":worstMs==="due_soon"?"#b07000":"#888"};font-size:8px">${daysText}</div>`:""}
+              ${countLabel}
+              <button onclick="event.stopPropagation();viewInMonitoring('${item.parentSku||item.rowId}')" style="font-size:8px;color:#0073ea;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;display:block">View in Monitoring →</button>
+            </div>`;
+          }
+        }
+
+        // Compliance summary — full labels
+        const compFields=[
+          ["Mechanical Testing", item.mechTesting],
+          ["Chemical Testing",   item.chemTesting],
+          ["Corrosion Test",     item.corrTesting],
+          ["Website Claim",      item.meetsClaim]
+        ];
+
+        html+=`<div class="ir" style="display:grid;grid-template-columns:${mg};border-bottom:0.5px solid #e8eaed;background:#fff;align-items:start">
+          <!-- Product name -->
+          <div style="padding:9px 10px;display:flex;align-items:flex-start;gap:6px;border-right:0.5px solid #e8eaed;overflow:hidden;min-width:0">
+            <button onclick="event.stopPropagation();toggleItem('${item.id}')" style="background:none;border:none;cursor:pointer;padding:2px;font-size:11px;color:#aaa;transform:rotate(${iOpen?0:-90}deg);transition:transform .15s;flex-shrink:0;margin-top:2px">▾</button>
+            <div style="width:4px;min-height:18px;border-radius:2px;background:${grp.color};flex-shrink:0;margin-top:2px"></div>
+            <div style="overflow:hidden;flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.name)}</div>
+              ${item.description?`<div style="font-size:10px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${esc(item.description)}</div>`:""}
+              ${item.parentSku?`<div style="font-size:9px;color:#aaa;margin-top:1px">Parent: ${esc(item.parentSku)}</div>`:""}
+            </div>
+          </div>
+          <!-- Priority — right of Product/SKU -->
+          <div style="padding:9px 6px;border-right:0.5px solid #e8eaed;display:flex;align-items:flex-start;justify-content:center;padding-top:10px">
+            ${item.prioritySku?`<span style="background:#e8f2ff;color:#0055bb;border:1px solid #c0d8f8;border-radius:6px;font-size:11px;font-weight:700;padding:2px 6px">${esc(item.prioritySku)}</span>`:`<span style="color:#ddd;font-size:10px">—</span>`}
+          </div>
+          <!-- Annual Test -->
+          <div style="padding:9px 8px;border-right:0.5px solid #e8eaed;overflow:hidden">${annualCell}</div>
+          <!-- Compliance summary — compact clickable cell, opens popup -->
+          <div class="comp-cell" onclick="event.stopPropagation();openComplianceModal('${item.id}')" style="padding:9px 10px;border-right:0.5px solid #e8eaed;min-width:0;cursor:pointer" title="Click to see full compliance details">
+            <table style="border-collapse:collapse;width:100%;font-size:10px">
+              ${[["Mechanical",item.mechTesting],["Chemical",item.chemTesting],["Corrosion",item.corrTesting],["Claim",item.meetsClaim]].map(([l,v])=>`
+              <tr>
+                <td style="padding:1px 5px 2px 0;color:#888;font-weight:500;white-space:nowrap;vertical-align:middle;width:1%">${l}</td>
+                <td style="padding:1px 0 2px 0;vertical-align:middle;max-width:0;overflow:hidden">
+                  ${v ? `<span class="${/^yes/i.test(v)?"cs-pill cs-yes":"cs-pill cs-no"}" style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle" title="${esc(v)}">${/^yes/i.test(v)?"✓ ":""}${esc(v)}</span>` : `<span style="color:#ccc;font-size:9px">—</span>`}
+                </td>
+              </tr>`).join("")}
+            </table>
+            <div style="margin-top:4px;font-size:9px;color:#0073ea;font-weight:500">🔍 Click for details${item.websiteUrl?" · 🔗 View Product":""}</div>
+          </div>
+          <!-- Country -->
+          <div style="padding:9px 8px;border-right:0.5px solid #e8eaed;overflow:hidden">${cb(item.country)}</div>
+          <!-- Channel -->
+          <div style="padding:9px 8px;border-right:0.5px solid #e8eaed;font-size:10px;color:#444;overflow:hidden;word-break:break-word">${esc(item.channel||"—")}</div>
+          <!-- Colors -->
+          <div style="padding:9px 8px;font-size:10px;color:#444;overflow:hidden">${esc(item.colors||"—")}</div>
+        </div>`;
+
+        if(iOpen){
+          // Only filter subtests if the search term specifically matches subtest content
+          // If the item was matched by its own name/SKU, show ALL subtests unfiltered
+          const itemMatchedDirectly = !searchQ || [item.name, item.description, item.parentSku, item.prioritySku, item.country, item.channel, ...item.name.split(/[-_\s]/)].some(v=>(v||"").toLowerCase().includes(searchQ.toLowerCase()));
+          const fsubs = searchQ && !itemMatchedDirectly
+            ? item.subs.filter(s=>(s.name+s.std).toLowerCase().includes(searchQ.toLowerCase()))
+            : item.subs;
+          html+=`<div style="background:#f6f7fb;border-bottom:0.5px solid #e0e0e0">
+            <div style="display:grid;grid-template-columns:${sg};background:#eeeff5;border-bottom:0.5px solid #dde0e9">
+              ${sHdrs.map((h,i)=>`<div style="padding:5px 10px 5px ${i===0?"44px":"10px"};font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-right:0.5px solid #dde0e9">${h}</div>`).join("")}
+            </div>`;
+          fsubs.forEach(sub=>{
+            const br=bestResult(sub);
+            html+=`<div class="sr" onclick="openDetail('${sub.id}','${item.id}','${grp.id}')" style="display:grid;grid-template-columns:${sg};border-bottom:0.5px solid #e8eaed;align-items:start">
+              <div style="padding:7px 10px 7px 44px;border-right:0.5px solid #e8eaed;min-width:0">
+                <div style="display:flex;align-items:flex-start;gap:5px">
+                  <div style="width:5px;height:5px;border-radius:50%;background:${grp.color};flex-shrink:0;margin-top:4px"></div>
+                  <div style="font-size:11px;font-weight:500;color:#222">${esc(sub.name)}</div>
+                </div>
+              </div>
+              <div style="padding:7px 10px;border-right:0.5px solid #e8eaed;font-size:9px;color:#555">${esc(sub.std)}</div>
+              <div style="padding:7px 10px;border-right:0.5px solid #e8eaed">${rb(br)}</div>
+              <div style="padding:7px 10px;border-right:0.5px solid #e8eaed">${ycell(sub.p24)}</div>
+              <div style="padding:7px 10px;border-right:0.5px solid #e8eaed">${ycell(sub.p25)}</div>
+              <div style="padding:7px 10px">${ycell(sub.p26)}</div>
+            </div>`;
+          });
+          if(!fsubs.length) html+=`<div style="padding:8px 44px;font-size:11px;color:#aaa;font-style:italic">No subtests match search</div>`;
+          html+=`</div>`;
+        }
+      });
+    }
+    html+=`</div>`;
+  });
+  wrap.innerHTML=`<div style="border:0.5px solid #e0e0e0;border-top:none;padding:6px 0 0">${html}</div>`;
+}
+
+// ── MONITORING TAB ────────────────────────────────────────────────────────────
+function renderMonitoring(){
+  const wrap=document.getElementById("board-wrap"); if(!wrap) return;
+  if(!GROUPS.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:48px;color:#aaa"><div style="font-size:32px">📅</div><div style="margin-top:8px;font-size:12px">Sync data first to see the monitoring schedule.</div></div>`;
+    return;
+  }
+
+  // Group all items by parentSku
+  const allItems=[];
+  GROUPS.forEach(g=>g.items.forEach(i=>allItems.push({g,i})));
+  const byParent={};
+  allItems.forEach(({g,i})=>{
+    const key=i.parentSku||i.rowId;
+    if(!byParent[key]) byParent[key]=[];
+    byParent[key].push({g,i});
+  });
+
+  // Build all monitoring rows
+  let allRows=[];
+  Object.values(byParent).forEach(siblings=>{
+    const donorEntry=siblings.find(({i})=>i.subs.some(s=>s.p24.length||s.p25.length||s.p26.length));
+    if(!donorEntry) return;
+    const {g,i:donor}=donorEntry;
+    const subsWith2024=donor.subs.filter(s=>
+      (s.p24&&s.p24.length>0)||(s.p25&&s.p25.length>0)||(s.p26&&s.p26.length>0)
+    );
+    const subStatuses=subsWith2024.map(s=>({
+      sub:s,decision:getRetestDecision(donor.id,s.id),
+      last:latestTestDate(s),exp:calcExpiry(s,donor.id),ms:monStatus(s,donor.id)
+    }));
+    let ms="none",exp=null,last=null;
+    if(subStatuses.length>0){
+      const dueOnes=subStatuses.filter(s=>s.decision!=="next");
+      const allDeferred=dueOnes.length===0;
+      if(allDeferred){
+        ms="deferred";
+        const sorted=[...subStatuses].sort((a,b)=>(a.exp?.getTime()||0)-(b.exp?.getTime()||0));
+        exp=sorted[0]?.exp||null; last=sorted[0]?.last||null;
+      } else {
+        const order={overdue:0,due_soon:1,ok:2};
+        const sorted=[...dueOnes].sort((a,b)=>(order[a.ms]??3)-(order[b.ms]??3));
+        ms=sorted[0]?.ms||"none"; exp=sorted[0]?.exp||null; last=sorted[0]?.last||null;
+      }
+    }
+    const siblingNames=siblings.filter(({i})=>i.id!==donor.id).map(({i})=>i.name);
+    const parentKey=donor.parentSku||donor.rowId;
+    allRows.push({g,donor,ms,exp,last,siblingNames,allSubs:donor.subs,subsWith2024,parentKey});
+  });
+
+  // Apply filters
+  let rows=[...allRows];
+  if(monFocusParent) rows=rows.filter(r=>r.parentKey===monFocusParent);
+  if(monSearchQ){
+    const q=monSearchQ.toLowerCase();
+    rows=rows.filter(r=>
+      r.donor.name.toLowerCase().includes(q)||
+      r.siblingNames.some(n=>n.toLowerCase().includes(q))||
+      r.allSubs.some(s=>s.name.toLowerCase().includes(q))
+    );
+  }
+  if(monFilterStatus!=="ALL"){
+    rows=rows.filter(r=>{
+      if(monFilterStatus==="deferred") return r.subsWith2024.every(s=>getRetestDecision(r.donor.id,s.id)==="next");
+      return r.subsWith2024.some(s=>monStatus(s,r.donor.id)===monFilterStatus);
+    });
+  }
+  if(monFilterDecision!=="ALL"){
+    rows=rows.filter(r=>r.subsWith2024.some(s=>getRetestDecision(r.donor.id,s.id)===monFilterDecision));
+  }
+  if(monFilterPriority!=="ALL"){
+    rows=rows.filter(r=>(r.donor.prioritySku||"").trim().toLowerCase()===monFilterPriority.toLowerCase());
+  }
+
+  // Count per-subtest for stat cards
+  let cntOverdue=0,cntSoon=0,cntOk=0,cntDeferred=0;
+  rows.forEach(({donor,subsWith2024})=>{
+    subsWith2024.forEach(s=>{
+      const sm=monStatus(s,donor.id);
+      if(sm==="overdue") cntOverdue++;
+      else if(sm==="due_soon") cntSoon++;
+      else if(sm==="ok") cntOk++;
+      else if(sm==="deferred") cntDeferred++;
+    });
+  });
+
+  const cg="minmax(180px,1.5fr) minmax(200px,2fr) minmax(300px,2fr) 190px";
+  const hdrs=["Product / SKUs","Annual Test Requirements","Schedule per Test","Management Decision"];
+
+  let h=`<div style="padding:14px 18px">`;
+
+  // Search + filter bar
+  const clearFocusBtn=monFocusParent?`<button onclick="clearMonFocus()" style="display:inline-flex;align-items:center;gap:4px;background:#e8f2ff;color:#0055bb;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid #c0d8f8;cursor:pointer">${esc(monFocusParent)} ✕</button>`:""
+  const sBtn=(val,lbl,c)=>`<button onclick="monFilterStatus='${val}';renderMonitoring()" style="font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;cursor:pointer;border:1px solid ${monFilterStatus===val?"#0073ea":"#dde0e7"};background:${monFilterStatus===val?"#e8f2ff":"#fff"};color:${monFilterStatus===val?"#0055bb":c}">${lbl}</button>`;
+  const dBtn=(val,lbl)=>`<button onclick="monFilterDecision='${val}';renderMonitoring()" style="font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;cursor:pointer;border:1px solid ${monFilterDecision===val?"#0073ea":"#dde0e7"};background:${monFilterDecision===val?"#e8f2ff":"#fff"};color:${monFilterDecision===val?"#0055bb":"#555"}">${lbl}</button>`;
+  const pBtn=(val,lbl,c)=>`<button onclick="monFilterPriority='${val}';renderMonitoring()" style="font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;cursor:pointer;border:1px solid ${monFilterPriority===val?"#0073ea":"#dde0e7"};background:${monFilterPriority===val?"#e8f2ff":"#fff"};color:${monFilterPriority===val?"#0055bb":c}">${lbl}</button>`;
+
+  h+=`<div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;padding:10px 14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <div style="position:relative;flex:1;min-width:180px;max-width:300px">
+        <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#aaa" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input value="${esc(monSearchQ)}" oninput="monSearchQ=this.value;renderMonitoring()" placeholder="Search SKU or test name…" style="width:100%;padding:6px 10px 6px 28px;border:1.5px solid #dde0e7;border-radius:7px;font-size:12px;background:#fafbfc;color:#333;outline:none;height:32px" autocomplete="off"/>
+      </div>
+      ${clearFocusBtn}
+      ${(monSearchQ||monFilterStatus!=="ALL"||monFilterDecision!=="ALL"||monFocusParent||monFilterPriority!=="ALL")?`<button onclick="clearMonFilters()" style="font-size:11px;color:#e2445c;background:none;border:none;cursor:pointer;font-weight:500">✕ Clear all</button>`:""}
+      <button onclick="exportMonitoringExcel()" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:5px 14px;font-size:11px;font-weight:600;color:#0a7a46;background:#f0fff8;border:1.5px solid #c3f0da;border-radius:7px;cursor:pointer">📊 Export Excel</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Priority:</span>
+      ${pBtn("ALL","All","#555")}
+      ${pBtn("Retail","★ Retail","#0a7a46")}
+      ${pBtn("A","A SKU","#0055bb")}
+      ${pBtn("B","B SKU","#b07000")}
+      ${pBtn("C","C SKU","#7c3aed")}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Status:</span>
+      ${sBtn("ALL","All","#555")}
+      ${sBtn("overdue","🔴 Retest Due","#c0392b")}
+      ${sBtn("due_soon","🟡 Due Soon","#b07000")}
+      ${sBtn("ok","🟢 On Track","#0a7a46")}
+      ${sBtn("deferred","🔵 Deferred","#0055bb")}
+      <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-left:8px">Decision:</span>
+      ${dBtn("ALL","All")}
+      ${dBtn("now","✓ Retest Now")}
+      ${dBtn("next","🔵 Deferred")}
+    </div>
+  </div>`;
+
+  // Alert banner
+  if(cntOverdue||cntSoon){
+    h+=`<div style="background:#fff8f8;border:1.5px solid #ffc0c0;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px">
+      <span style="font-size:20px;flex-shrink:0">🔴</span>
+      <div><div style="font-size:13px;font-weight:700;color:#c0392b;margin-bottom:3px">Action Required</div>
+      <div style="font-size:11px;color:#555;line-height:1.6">${cntOverdue?`<strong>${cntOverdue} test${cntOverdue>1?"s":""} overdue</strong> — retesting is past due. `:""
+      }${cntSoon?`<strong>${cntSoon} test${cntSoon>1?"s":""} due within 6 months</strong> — schedule now.`:""}</div>
+      </div></div>`;
+  }
+
+  // Stat cards — clickable to filter
+  h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    ${[{l:"Retest Due",n:cntOverdue,bg:"#fff0f0",c:"#c0392b",br:"#ffd0d0",f:"overdue"},
+       {l:"Due Soon <6mo",n:cntSoon,bg:"#fffdf0",c:"#b07000",br:"#fde8c0",f:"due_soon"},
+       {l:"On Track >6mo",n:cntOk,bg:"#f0fff8",c:"#0a7a46",br:"#c3f0da",f:"ok"},
+       {l:"Deferred",n:cntDeferred,bg:"#f0f6ff",c:"#0055bb",br:"#c0d8f8",f:"deferred"}]
+    .map(s=>`<div style="background:${s.bg};border:1.5px solid ${s.br};border-radius:8px;padding:10px 16px;flex:1;min-width:80px;text-align:center">
+      <div style="font-size:24px;font-weight:700;color:${s.c}">${s.n}</div>
+      <div style="font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px">${s.l}</div>
+    </div>`).join("")}
+  </div>`;
+
+  if(rows.length===0){
+    h+=`<div style="text-align:center;padding:48px;color:#aaa"><div style="font-size:32px">🔍</div><div style="font-size:12px;margin-top:8px">No items match the current filters.</div></div>`;
+  } else {
+    h+=`<div style="border:1.5px solid #e0e0e0;border-radius:10px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:${cg};background:#f2f3f6;border-bottom:1.5px solid #dde0e9">
+        ${hdrs.map(hd=>`<div style="padding:8px 12px;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-right:0.5px solid #dde0e9">${hd}</div>`).join("")}
+      </div>`;
+
+    rows.forEach(({g,donor,siblingNames,allSubs,subsWith2024})=>{
+      const bgRow="#fff";
+
+      // Product cell
+      const productCell=`<div style="padding:10px 12px;border-right:0.5px solid #e8eaed">
+        <div style="display:flex;align-items:flex-start;gap:6px">
+          <div style="width:4px;border-radius:2px;background:${g.color};flex-shrink:0;min-height:16px;margin-top:2px"></div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#222">${esc(donor.name)}</div>
+            ${siblingNames.map(n=>`<div style="font-size:10px;color:#bbb;margin-top:2px">${esc(n)}</div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+
+      // Annual Test Requirements cell
+      const subRows=allSubs.map(s=>{
+        const sbr=bestResult(s);
+        const dotColor=sbr==="PASS"?"#00c875":sbr==="FAIL"?"#e2445c":"#ccc";
+        const hasAnnual=(s.p24&&s.p24.length>0)||(s.p25&&s.p25.length>0)||(s.p26&&s.p26.length>0);
+        return `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+          <div style="width:7px;height:7px;border-radius:50%;background:${dotColor};flex-shrink:0"></div>
+          <span style="font-size:10px;color:#333;flex:1">${esc(s.name)}</span>
+          ${hasAnnual?`<span style="font-size:8px;font-weight:700;color:#0073ea;background:#e8f2ff;padding:1px 5px;border-radius:10px;flex-shrink:0">Annual</span>`:""}
+        </div>`;
+      }).join("");
+      const testCell=`<div style="padding:10px 12px;border-right:0.5px solid #e8eaed">${subRows||`<span style="font-size:10px;color:#bbb">—</span>`}</div>`;
+
+      // Per-subtest schedule
+      const scheduleCell=`<div style="padding:10px 12px;border-right:0.5px solid #e8eaed">
+        ${subsWith2024.length===0?`<span style="color:#bbb;font-size:10px">—</span>`:subsWith2024.map(s=>{
+          const dec=getRetestDecision(donor.id,s.id);
+          const sExp=calcExpiry(s,donor.id);
+          const sLast=latestTestDate(s);
+          const sMs=monStatus(s,donor.id);
+          const sDays=sExp?Math.round((sExp-new Date())/86400000):null;
+          const icon=sMs==="overdue"?"🔴":sMs==="due_soon"?"🟡":sMs==="ok"?"🟢":sMs==="deferred"?"🔵":"⚪";
+          const dateColor=sMs==="overdue"?"#c0392b":sMs==="due_soon"?"#b07000":sMs==="deferred"?"#0055bb":sMs==="ok"?"#0a7a46":"#888";
+          const daysText=sDays===null?"":sDays<0?`${Math.abs(sDays)}d overdue`:sMs==="deferred"?`${sDays}d (deferred)`:`${sDays}d left`;
+          return `<div style="margin-bottom:7px;padding:6px 8px;border-radius:5px;background:${sMs==="overdue"?"#fff8f8":sMs==="due_soon"?"#fffdf0":sMs==="deferred"?"#f0f6ff":sMs==="ok"?"#f0fff8":"#f7f8fa"};border:1px solid ${sMs==="overdue"?"#ffc0c0":sMs==="due_soon"?"#fde8c0":sMs==="deferred"?"#c0d8f8":sMs==="ok"?"#c3f0da":"#e0e0e0"}">
+            <div style="font-size:9px;font-weight:600;color:#555;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.name)}</div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span style="font-size:9px">${icon}</span>
+              ${sLast?`<span style="font-size:9px;color:#888">Last: ${fmtD(sLast)}</span>`:""}
+              ${sExp?`<span style="font-size:9px;font-weight:700;color:${dateColor}">Due: ${fmtD(sExp)}</span>`:""}
+              ${daysText?`<span style="font-size:9px;color:${dateColor}">(${daysText})</span>`:""}
+            </div>
+          </div>`;
+        }).join("")}
+      </div>`;
+
+      // Management Decision cell
+      const decisionCell=`<div style="padding:10px 12px">
+        ${subsWith2024.length===0?`<span style="color:#bbb;font-size:10px">—</span>`:subsWith2024.map(s=>{
+          const dec=getRetestDecision(donor.id,s.id);
+          const lastD=latestTestDate(s);
+          const lastYear=lastD?lastD.getFullYear():null;
+          const addYears=lastYear&&lastYear<=2024?2:1;
+          const retestYear=lastYear?lastYear+addYears:"—";
+          const standardDue=lastD?new Date(new Date(lastD).setFullYear(lastD.getFullYear()+addYears)):null;
+          const deferDate=standardDue?new Date(new Date(standardDue).setMonth(standardDue.getMonth()+12)):null;
+          const deferLabel=deferDate?fmtD(deferDate):"next year";
+          return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px dashed #e0e0e0">
+            <div style="font-size:9px;font-weight:600;color:#555;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.name)}</div>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;padding:4px 7px;border-radius:6px;border:1px solid ${dec==="now"?"#ffc0c0":"#e0e3ea"};background:${dec==="now"?"#fff0f0":"#fafbfc"}">
+              <input type="checkbox" ${dec==="now"?"checked":""} onchange="toggleRetestNow('${donor.id}','${s.id}',this.checked)" onclick="event.stopPropagation()" style="width:12px;height:12px;cursor:pointer;accent-color:#c0392b"/>
+              <div style="font-size:10px"><div style="color:${dec==="now"?"#c0392b":"#555"};font-weight:${dec==="now"?"700":"500"}">Retest Now</div><div style="font-size:8px;color:#aaa">Target: ${retestYear}</div></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 7px;border-radius:6px;border:1px solid ${dec==="next"?"#c0d8f8":"#e0e3ea"};background:${dec==="next"?"#f0f6ff":"#fafbfc"}">
+              <input type="checkbox" ${dec==="next"?"checked":""} onchange="toggleRetestNext('${donor.id}','${s.id}',this.checked)" onclick="event.stopPropagation()" style="width:12px;height:12px;cursor:pointer;accent-color:#0073ea"/>
+              <div style="font-size:10px"><div style="color:${dec==="next"?"#0055bb":"#555"};font-weight:${dec==="next"?"700":"500"}">Defer</div><div style="font-size:8px;color:#aaa">Skip ${retestYear} → ${deferLabel}</div></div>
+            </label>
+          </div>`;
+        }).join("")}
+      </div>`;
+
+      h+=`<div style="display:grid;grid-template-columns:${cg};border-bottom:0.5px solid #e8eaed;align-items:start">
+        ${productCell}${testCell}${scheduleCell}${decisionCell}
+      </div>`;
+    });
+
+    h+=`</div><div style="margin-top:8px;font-size:10px;color:#aaa;text-align:right">🟢 On Track >6mo · 🟡 Due Soon <6mo · 🔴 Retest Due = past due · Defer adds +12mo to due date</div>`;
+  }
+  h+=`</div>`;
+  wrap.innerHTML=h;
+}
+
+// ── TEST EXPENSE TAB ──────────────────────────────────────────────────────────
+function parseCost(str){
+  if(!str) return null;
+  const m=str.replace(/,/g,"").match(/\$?([\d]+\.?[\d]*)/);
+  return m?parseFloat(m[1]):null;
+}
+
+function testCategory(name){
+  const n=(name||"").toLowerCase();
+  if(/tensile|mbs|break|load|fatigue|pull|mechanical|performance|elongation|abrasion|spindle|ratchet|physical|durability|impact|compression|lashing|capacity|welding/i.test(n)) return "Mechanical";
+  if(/chemical|prop65|reach|phthalate|svhc|rohs|heavy metal|flame|toxic|cadmium|lead|substance|restricted/i.test(n)) return "Chemical";
+  if(/corrosion|salt spray|coating|rust|zinc|plating|astm b117/i.test(n)) return "Corrosion";
+  if(/packaging|labeling|label|documentation|marking|claim|verification|audit|safety risk|regulatory|compliance/i.test(n)) return "Regulatory";
+  return "Other";
+}
+
+function buildExpenseRows(){
+  const all=[];
+  GROUPS.forEach(g=>g.items.forEach(item=>{
+    const siblings=[];
+    GROUPS.forEach(g2=>g2.items.forEach(i2=>{
+      if(i2.id!==item.id&&i2.parentSku&&i2.parentSku===item.parentSku) siblings.push(i2.name);
+    }));
+    item.subs.forEach(sub=>{
+      [[sub.p24,"2024"],[sub.p25,"2025"],[sub.p26,"2026"]].forEach(([blocks,yr])=>{
+        if(!blocks||!blocks.length) return;
+        blocks.forEach(b=>{
+          const cost=parseCost(b.cost);
+          if(cost===null) return;
+          all.push({
+            group:g.title,groupColor:g.color,
+            item,siblings,
+            subName:sub.name,
+            category:testCategory(sub.name),
+            year:yr,
+            supplier:b.supplier||"",
+            lab:b.lab||"",
+            date:b.date||"",
+            result:b.result||"",
+            cost,costRaw:b.cost||"",
+            priority:(item.prioritySku||"").trim(),
+          });
+        });
+      });
+    });
+  }));
+  return all;
+}
+
+function renderExpense(){
+  const wrap=document.getElementById("board-wrap"); if(!wrap) return;
+  if(!GROUPS.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:64px;color:#aaa"><div style="font-size:48px">💰</div><div style="font-size:14px;margin-top:12px">Sync data first to see test expense data.</div></div>`;
+    return;
+  }
+
+  const allRows=buildExpenseRows();
+
+  // Apply filters
+  let rows=[...allRows];
+  if(expFilterPriority!=="ALL") rows=rows.filter(r=>r.priority.toLowerCase()===expFilterPriority.toLowerCase());
+  if(expFilterCategory!=="ALL") rows=rows.filter(r=>r.category===expFilterCategory);
+  if(expFilterYear!=="ALL") rows=rows.filter(r=>r.year===expFilterYear);
+
+  // ── Aggregations ──
+  const totalCost=rows.reduce((s,r)=>s+r.cost,0);
+  const byYear={2024:0,2025:0,2026:0};
+  rows.forEach(r=>{if(byYear[r.year]!==undefined) byYear[r.year]+=r.cost;});
+  const byCat={};
+  rows.forEach(r=>{byCat[r.category]=(byCat[r.category]||0)+r.cost;});
+  const bySupplier={};
+  rows.forEach(r=>{if(r.supplier) bySupplier[r.supplier]=(bySupplier[r.supplier]||0)+r.cost;});
+  const byGroup={};
+  rows.forEach(r=>{byGroup[r.group]=(byGroup[r.group]||0)+r.cost;});
+  // Sub-category breakdown (by actual subtest name within selected category)
+  const bySubCat={};
+  rows.forEach(r=>{
+    const key=r.subName;
+    bySubCat[key]=(bySubCat[key]||0)+r.cost;
+  });
+
+  const catColors={Mechanical:"#0073ea",Chemical:"#00c875",Corrosion:"#fdab3d",Regulatory:"#a358df",Other:"#c4c4c4"};
+  const yearColors={"2024":"#0073ea","2025":"#00c875","2026":"#e2445c"};
+  const groupColorPalette=["#0073ea","#00c875","#fdab3d","#e2445c","#a358df","#579bfc","#66ccff","#ff7f50"];
+
+  const fmt=n=>n===null?"—":"$"+n.toFixed(2);
+  const fmtK=n=>n>=1000?"$"+(n/1000).toFixed(1)+"k":"$"+n.toFixed(0);
+  const catEntries=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const topSuppliers=Object.entries(bySupplier).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const groupEntries=Object.entries(byGroup).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  // Top sub-categories (by subtest name) for selected category or all
+  const topSubCats=Object.entries(bySubCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  // ── Bar chart helper ──
+  function barChart(data,height=120){
+    if(!data.length) return `<div style="color:#bbb;font-size:11px;text-align:center;padding:20px">No data</div>`;
+    const maxV=Math.max(...data.map(d=>d[1]),1);
+    return `<div style="display:flex;align-items:flex-end;gap:4px;height:${height}px;padding:8px 0 0">
+      ${data.map(([label,val,color])=>{
+        const h2=Math.max(4,Math.round((val/maxV)*(height-24)));
+        return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+          <div style="font-size:8px;color:#555;font-weight:600;margin-bottom:2px;text-align:center">${fmtK(val)}</div>
+          <div style="width:100%;background:${color||"#0073ea"};border-radius:3px 3px 0 0;height:${h2}px"></div>
+          <div style="font-size:7px;color:#888;margin-top:3px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:0 1px">${esc(label.length>12?label.slice(0,12)+"…":label)}</div>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }
+
+  // ── Horizontal bar chart for sub-category breakdown ──
+  function hBarChart(data){
+    if(!data.length) return `<div style="color:#bbb;font-size:11px;padding:8px">No data</div>`;
+    const maxV=Math.max(...data.map(d=>d[1]),1);
+    return data.map(([label,val,color],i)=>{
+      const pct=Math.max(2,Math.round(val/maxV*100));
+      return `<div style="margin-bottom:7px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+          <span style="font-size:10px;color:#333;font-weight:${i<3?"600":"400"};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${esc(label)}</span>
+          <span style="font-size:10px;font-weight:600;color:${color||"#0073ea"};flex-shrink:0">${fmtK(val)}</span>
+        </div>
+        <div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden">
+          <div style="height:100%;background:${color||"#0073ea"};border-radius:3px;width:${pct}%"></div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // ── Donut chart ──
+  function donutChart(segments,size=130){
+    const total=segments.reduce((s,[,v])=>s+v,0);
+    if(!total) return `<div style="color:#bbb;font-size:11px;text-align:center;padding:20px">No data</div>`;
+    let angle=-90;
+    const cx=size/2,cy=size/2,r=size*0.38,ir=size*0.22;
+    const paths=segments.map(([,val,color])=>{
+      const a=Math.max(0.1,(val/total)*360);
+      const r1=angle*(Math.PI/180),r2=(angle+a)*(Math.PI/180);
+      const x1=cx+r*Math.cos(r1),y1=cy+r*Math.sin(r1);
+      const x2=cx+r*Math.cos(r2),y2=cy+r*Math.sin(r2);
+      const xi1=cx+ir*Math.cos(r1),yi1=cy+ir*Math.sin(r1);
+      const xi2=cx+ir*Math.cos(r2),yi2=cy+ir*Math.sin(r2);
+      const laf=a>180?1:0;
+      const d=`M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${laf},1 ${x2.toFixed(1)},${y2.toFixed(1)} L${xi2.toFixed(1)},${yi2.toFixed(1)} A${ir},${ir} 0 ${laf},0 ${xi1.toFixed(1)},${yi1.toFixed(1)} Z`;
+      angle+=a;
+      return `<path d="${d}" fill="${color}" stroke="#fff" stroke-width="1.5"/>`;
+    });
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      ${paths.join("")}
+      <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="11" font-weight="700" fill="#333">${fmtK(total)}</text>
+      <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="8" fill="#888">Total</text>
+    </svg>`;
+  }
+
+  // Priority filter buttons
+  const pBtnE=(val,lbl)=>`<button onclick="expFilterPriority='${val}';renderExpense()" style="font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;cursor:pointer;border:1px solid ${expFilterPriority===val?"#0073ea":"#dde0e7"};background:${expFilterPriority===val?"#0073ea":"#fff"};color:${expFilterPriority===val?"#fff":"#555"}">${lbl}</button>`;
+  const cBtnE=(val,lbl,color)=>`<button onclick="expFilterCategory='${val}';renderExpense()" style="font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;cursor:pointer;border:1px solid ${expFilterCategory===val?color:"#dde0e7"};background:${expFilterCategory===val?color:"#fff"};color:${expFilterCategory===val?"#fff":"#555"}">${lbl}</button>`;
+  const yBtnE=(val,lbl,color)=>`<button onclick="expFilterYear='${val}';renderExpense()" style="font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;cursor:pointer;border:1px solid ${expFilterYear===val?color:"#dde0e7"};background:${expFilterYear===val?color:"#fff"};color:${expFilterYear===val?"#fff":"#555"}">${lbl}</button>`;
+
+  const hasFilter=expFilterPriority!=="ALL"||expFilterCategory!=="ALL"||expFilterYear!=="ALL";
+
+  let h=`<div style="padding:14px 18px">`;
+
+  // ── Filter bar ──
+  h+=`<div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;padding:10px 14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Priority SKU:</span>
+      ${pBtnE("ALL","All")}
+      ${pBtnE("Retail","★ Retail")}
+      ${pBtnE("A","A SKU")}
+      ${pBtnE("B","B SKU")}
+      ${pBtnE("C","C SKU")}
+      ${pBtnE("NPD","NPD")}
+      ${hasFilter?`<button onclick="expFilterPriority='ALL';expFilterCategory='ALL';expFilterYear='ALL';renderExpense()" style="margin-left:8px;font-size:11px;color:#e2445c;background:none;border:none;cursor:pointer;font-weight:500">✕ Clear filters</button>`:""}
+      <button onclick="exportExpenseCSV()" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:5px 14px;font-size:11px;font-weight:600;color:#0a7a46;background:#f0fff8;border:1.5px solid #c3f0da;border-radius:7px;cursor:pointer">📊 Export Excel</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+      <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Category:</span>
+      ${cBtnE("ALL","All","#555")}
+      ${cBtnE("Mechanical","⚙ Mechanical","#0073ea")}
+      ${cBtnE("Chemical","🧪 Chemical","#00c875")}
+      ${cBtnE("Corrosion","🛡 Corrosion","#fdab3d")}
+      ${cBtnE("Regulatory","📋 Regulatory","#a358df")}
+      ${cBtnE("Other","Other","#888")}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Year:</span>
+      ${yBtnE("ALL","All","#555")}
+      ${yBtnE("2024","2024","#0073ea")}
+      ${yBtnE("2025","2025","#00c875")}
+      ${yBtnE("2026","2026","#e2445c")}
+    </div>
+  </div>`;
+
+  // ── KPI Summary cards ──
+  h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <div style="flex:1;min-width:110px;background:#fff;border:2px solid #0073ea;border-radius:10px;padding:12px 14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#0073ea"></div>
+      <div style="font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${hasFilter?"Filtered Spend":"Total Spend"}</div>
+      <div style="font-size:26px;font-weight:700;color:#0073ea">${fmtK(totalCost)}</div>
+      <div style="font-size:9px;color:#aaa">${rows.length} entries${hasFilter?" (filtered)":""}</div>
+    </div>
+    ${[["2024",byYear[2024],"#0073ea","#c0d8f8"],["2025",byYear[2025],"#00c875","#c3f0da"],["2026",byYear[2026],"#e2445c","#ffd5d5"]].map(([yr,val,c,bc])=>`
+    <div style="flex:1;min-width:100px;background:#fff;border:1.5px solid ${bc};border-radius:10px;padding:12px 14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${c}"></div>
+      <div style="font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${yr}</div>
+      <div style="font-size:22px;font-weight:700;color:${c}">${fmtK(val)}</div>
+      <div style="font-size:9px;color:#aaa">${rows.filter(r=>r.year===yr).length} entries</div>
+    </div>`).join("")}
+    <div style="flex:1;min-width:100px;background:#fff;border:1.5px solid #fde8c0;border-radius:10px;padding:12px 14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#fdab3d"></div>
+      <div style="font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Top Category</div>
+      <div style="font-size:14px;font-weight:700;color:#b07000">${catEntries[0]?catEntries[0][0]:"—"}</div>
+      <div style="font-size:13px;font-weight:700;color:#b07000">${catEntries[0]?fmtK(catEntries[0][1]):"$0"}</div>
+    </div>
+  </div>`;
+
+  // ── Charts row 1 ──
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+    <div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:2px">📅 Yearly Spend</div>
+      <div style="font-size:9px;color:#aaa;margin-bottom:6px">Total cost by year</div>
+      ${barChart([["2024",byYear["2024"],yearColors["2024"]],["2025",byYear["2025"],yearColors["2025"]],["2026",byYear["2026"],yearColors["2026"]]],120)}
+    </div>
+    <div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:2px">🧪 By Test Category</div>
+      <div style="font-size:9px;color:#aaa;margin-bottom:6px">Cost distribution</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${donutChart(catEntries.map(([k,v])=>[k,v,catColors[k]||"#ccc"]),110)}
+        <div style="flex:1">
+          ${catEntries.map(([k,v])=>`<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+            <div style="width:8px;height:8px;border-radius:2px;background:${catColors[k]||"#ccc"};flex-shrink:0"></div>
+            <div style="flex:1;min-width:0;font-size:9px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</div>
+            <div style="font-size:9px;font-weight:600;color:#555;flex-shrink:0">${totalCost>0?Math.round(v/totalCost*100):0}%</div>
+          </div>`).join("")}
+        </div>
+      </div>
+    </div>
+    <div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:2px">📦 By Product Group</div>
+      <div style="font-size:9px;color:#aaa;margin-bottom:6px">Top 6 groups</div>
+      ${barChart(groupEntries.map(([k,v],i)=>[k,v,groupColorPalette[i]]),120)}
+    </div>
+  </div>`;
+
+  // ── Charts row 2: Stacked supplier bar + breakdown ──
+  // Build stacked data: for each top supplier, cost split by category
+  const allCats=Object.keys(catColors);
+  const supplierStacks=topSuppliers.map(([sup,total])=>{
+    const byCatForSup={};
+    rows.forEach(r=>{if(r.supplier===sup) byCatForSup[r.category]=(byCatForSup[r.category]||0)+r.cost;});
+    return {sup,total,byCatForSup};
+  });
+  const maxStack=Math.max(...supplierStacks.map(s=>s.total),1);
+  const stackHeight=130;
+
+  const stackedBar=supplierStacks.map(({sup,total,byCatForSup})=>{
+    const totalH=Math.max(4,Math.round((total/maxStack)*stackHeight));
+    const segments=allCats.filter(c=>byCatForSup[c]>0).map(c=>{
+      const h2=Math.max(1,Math.round((byCatForSup[c]/total)*totalH));
+      return `<div title="${esc(c)}: ${fmtK(byCatForSup[c])}" style="width:100%;height:${h2}px;background:${catColors[c]};"></div>`;
+    });
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+      <div style="font-size:8px;color:#555;font-weight:600;margin-bottom:2px">${fmtK(total)}</div>
+      <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:${stackHeight}px;border-radius:3px 3px 0 0;overflow:hidden;background:#f5f5f5">
+        <div style="display:flex;flex-direction:column-reverse;width:100%">${segments.join("")}</div>
+      </div>
+      <div style="font-size:7px;color:#888;margin-top:3px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:0 1px">${esc(sup.length>14?sup.slice(0,14)+"…":sup)}</div>
+    </div>`;
+  }).join("");
+
+  h+=`<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-bottom:14px">
+    <div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:2px">🏭 Spend by Supplier (Top 8)</div>
+      <div style="font-size:9px;color:#aaa;margin-bottom:6px">Stacked by test category · hover for details</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:${stackHeight+24}px;padding-top:8px">${stackedBar}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:8px;border-top:0.5px solid #f0f0f0">
+        ${allCats.map(c=>`<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:${catColors[c]}"></div><span style="font-size:9px;color:#555">${c}</span></div>`).join("")}
+      </div>
+    </div>
+    <div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:2px">🔬 Test Cost Breakdown${expFilterCategory!=="ALL"?` · ${expFilterCategory}`:""}</div>
+      <div style="font-size:9px;color:#aaa;margin-bottom:8px">${expFilterCategory!=="ALL"?`Top tests within ${expFilterCategory}`:"Highest cost tests (all categories)"}</div>
+      ${hBarChart(topSubCats.map(([k,v],i)=>[k,v,expFilterCategory!=="ALL"?(catColors[expFilterCategory]||"#0073ea"):groupColorPalette[i%8]]))}
+    </div>
+  </div>`;
+
+  // ── Expense Table ──
+  const tg="minmax(0,2fr) 75px minmax(0,1.4fr) minmax(0,1fr) 90px 60px 90px 80px";
+  const th=["Product / SKU","Category","Supplier","Test Lab","Date","Year","Result","Cost"];
+
+  h+=`<div style="background:#fff;border:1.5px solid #e0e3ea;border-radius:10px;overflow:hidden">
+    <div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="font-size:12px;font-weight:700;color:#333">Test Expense Detail</div>
+      <div style="font-size:11px;color:#888">${rows.length} entries · Total: <strong style="color:#0073ea">${fmt(totalCost)}</strong></div>
+    </div>
+    <div style="display:grid;grid-template-columns:${tg};background:#f2f3f6;border-bottom:1.5px solid #dde0e9">
+      ${th.map(h2=>`<div style="padding:7px 10px;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-right:0.5px solid #dde0e9">${h2}</div>`).join("")}
+    </div>`;
+
+  rows.sort((a,b)=>{
+    if(a.group!==b.group) return a.group.localeCompare(b.group);
+    if(a.item.id!==b.item.id) return a.item.name.localeCompare(b.item.name);
+    return a.year.localeCompare(b.year);
+  }).forEach((r,idx)=>{
+    const resultColor=/(pass)/i.test(r.result)?"#0a7a46":/(fail)/i.test(r.result)?"#c0392b":"#888";
+    const catColor=catColors[r.category]||"#ccc";
+    const sibCount=r.siblings.length;
+    h+=`<div style="display:grid;grid-template-columns:${tg};border-bottom:0.5px solid #e8eaed;background:${idx%2===0?"#fff":"#fafbfd"};align-items:center">
+      <div style="padding:8px 10px;border-right:0.5px solid #e8eaed;overflow:hidden;min-width:0">
+        <div style="display:flex;align-items:flex-start;gap:5px">
+          <div style="width:3px;min-height:14px;border-radius:2px;background:${r.groupColor};flex-shrink:0;margin-top:2px"></div>
+          <div style="overflow:hidden;flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600;color:#0073ea;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.item.name)}</div>
+            <div style="font-size:9px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.subName)}</div>
+            ${sibCount?`<button onclick="event.stopPropagation();openSiblingModal('${r.item.id}')" style="font-size:8px;color:#0073ea;background:#e8f2ff;border:1px solid #c0d8f8;border-radius:4px;padding:1px 6px;cursor:pointer;margin-top:2px">+${sibCount} SKUs ▾</button>`:""}
+          </div>
+        </div>
+      </div>
+      <div style="padding:8px 6px;border-right:0.5px solid #e8eaed;text-align:center">
+        <span style="font-size:8px;font-weight:700;color:#fff;background:${catColor};padding:2px 5px;border-radius:8px">${esc(r.category)}</span>
+      </div>
+      <div style="padding:8px 8px;border-right:0.5px solid #e8eaed;font-size:10px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.supplier||"—")}</div>
+      <div style="padding:8px 8px;border-right:0.5px solid #e8eaed;font-size:10px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.lab||"—")}</div>
+      <div style="padding:8px 8px;border-right:0.5px solid #e8eaed;font-size:10px;color:#555">${esc(r.date||"—")}</div>
+      <div style="padding:8px 6px;border-right:0.5px solid #e8eaed;text-align:center">
+        <span style="font-size:10px;font-weight:700;color:${yearColors[r.year]||"#555"}">${r.year}</span>
+      </div>
+      <div style="padding:8px 8px;border-right:0.5px solid #e8eaed;font-size:9px;font-weight:600;color:${resultColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.result||"—")}</div>
+      <div style="padding:8px 8px;font-size:11px;font-weight:700;color:#0a7a46;text-align:right">${fmt(r.cost)}</div>
+    </div>`;
+  });
+
+  if(!rows.length){
+    h+=`<div style="text-align:center;padding:48px;color:#aaa"><div style="font-size:32px">🔍</div><div style="font-size:12px;margin-top:8px">${hasFilter?"No entries match the current filters.":"No cost data found. Add Cost: $XX.XX to your Subitems sheet's year columns."}</div></div>`;
+  }
+  h+=`</div></div>`;
+  wrap.innerHTML=h;
+}
+
+function openSiblingModal(itemId){
+  let found=null;
+  GROUPS.forEach(g=>g.items.forEach(i=>{ if(i.id===itemId) found=i; }));
+  if(!found) return;
+  const siblings=[];
+  GROUPS.forEach(g=>g.items.forEach(i=>{
+    if(i.id!==found.id&&i.parentSku&&i.parentSku===found.parentSku) siblings.push(i.name);
+  }));
+  openModal({type:"siblings",name:found.name,parentSku:found.parentSku,siblings});
+}
+
+function downloadXLSX(wb, filename){
+  if(typeof XLSX==="undefined"){
+    // XLSX not loaded yet - wait for CDN then retry
+    alert("Loading Excel library, please try again in a moment...");
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=function(){ alert("Excel library loaded! Please click Export Excel again."); };
+    document.head.appendChild(s);
+    return;
+  }
+  try{
+    const wbout=XLSX.write(wb,{bookType:"xlsx",type:"base64"});
+    const a=document.createElement("a");
+    a.href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"+wbout;
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }catch(e){ alert("Export failed: "+e.message); }
+}
+
+function exportExpenseCSV(){
+  if(typeof XLSX==="undefined"){ alert("Excel library not loaded. Please check your internet connection."); return; }
+  const data=[["Product","Test Name","Category","Group","Supplier","Test Lab","Date","Year","Result","Cost ($)"]];
+  GROUPS.forEach(g=>g.items.forEach(item=>{
+    item.subs.forEach(sub=>{
+      [["2024",sub.p24],["2025",sub.p25],["2026",sub.p26]].forEach(([yr,blocks])=>{
+        if(!blocks) return;
+        blocks.forEach(b=>{
+          const cost=parseCost(b.cost);
+          if(cost===null) return;
+          data.push([item.name,sub.name,testCategory(sub.name),g.title,b.supplier||"",b.lab||"",b.date||"",yr,b.result||"",cost]);
+        });
+      });
+    });
+  }));
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"]=[{wch:25},{wch:35},{wch:14},{wch:20},{wch:30},{wch:15},{wch:14},{wch:8},{wch:10},{wch:10}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Test Expense");
+  downloadXLSX(wb,"Test-Expense-"+new Date().toISOString().slice(0,10)+".xlsx");
+}
+
+
+// ── DETAIL MODAL ──────────────────────────────────────────────────────────────
+function renderModals(){
+  const root=document.getElementById("modal-root"); if(!root) return;
+  if(!modal){root.innerHTML="";return;}
+
+  if(modal.type==="detail"){
+    const sub=modal.data;
+    const fields=[["Test Standard",sub.std],["Specific Evaluation Criteria",sub.criteria],["Expected Target Performance",sub.target],["Required Lab Equipment",sub.equipment],["Required Lab Accreditation",sub.accreditation],["Recommended Test Labs",sub.labs]];
+    const yrs=[["2024",sub.p24],["2025",sub.p25],["2026",sub.p26]].filter(([,v])=>v&&v.length);
+    const ms=monStatus(sub); const exp=calcExpiry(sub); const last=latestTestDate(sub);
+    const msIcon=ms==="overdue"?"🔴":ms==="due_soon"?"🟡":ms==="ok"?"🟢":"";
+
+    let monSection="";
+    if(ms!=="none"){
+      monSection=`<div style="margin-bottom:12px;padding:10px 13px;background:${ms==="overdue"?"#fff8f8":ms==="due_soon"?"#fffdf0":"#f0fff8"};border:1.5px solid ${ms==="overdue"?"#ffc0c0":ms==="due_soon"?"#fde8c0":"#c3f0da"};border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:6px">Compliance Monitoring</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px">
+          <span style="font-weight:700;color:${ms==="overdue"?"#c0392b":ms==="due_soon"?"#b07000":"#0a7a46"}">${msIcon} ${ms==="overdue"?"Overdue":ms==="due_soon"?"Due Soon":"On Track"}</span>
+          ${sub.freq?`<span style="color:#555">Every ${esc(sub.freq.label)}</span>`:""}
+          ${last?`<span style="color:#555">Last tested: <strong>${fmtD(last)}</strong></span>`:""}
+          ${exp?`<span style="color:#555">Next due: <strong>${fmtD(exp)}</strong></span>`:""}
+        </div>
+      </div>`;
+    }
+
+    let yrsHtml=yrs.map(([yr,blocks])=>{
+      const overall=calcOverall(blocks);
+      const ip=/^PASS$/i.test(overall),ifl=/^FAIL$/i.test(overall);
+      const oc=ifl?"#c0392b":ip?"#0a7a46":"#555";
+      let inner=`<div style="background:#f7f8fa;border-radius:5px;padding:12px 13px;font-size:11px;color:#333;line-height:1.7">`;
+      if(blocks.length>1) inner+=`<div style="margin-bottom:8px;padding:6px 10px;background:${ip?"#e3f9ee":ifl?"#ffe8e8":"#f0f6ff"};border-radius:6px;font-size:11px;font-weight:700;color:${oc}">Overall Result (P1 Rule): ${overall}</div>`;
+      blocks.forEach((b,idx)=>{
+        const bp=/\bPASS\b/i.test(b.result||""),bf=/\bFAIL\b/i.test(b.result||"");
+        const bc=bf?"#c0392b":bp?"#0a7a46":"#555";
+        if(idx>0) inner+=`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e0e0e0">`;
+        inner+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">${pBadge(b.priority)}<strong>${esc(b.supplier||"")}</strong>${b.result?`<span style="color:${bc};font-weight:700;margin-left:auto">${esc(b.result)}</span>`:""}</div>`;
+        if(b.method) inner+=`<div><span style="color:#888">Method:</span> ${esc(b.method)}</div>`;
+        if(b.wwl) inner+=`<div><span style="color:#888">WWL:</span> ${esc(b.wwl)}${b.claim?` | <span style="color:#888">Claim:</span> ${esc(b.claim)}`:""}</div>`;
+        if(b.date||b.lab) inner+=`<div><span style="color:#888">Date:</span> ${esc(b.date||"")}${b.lab?` | <span style="color:#888">Lab:</span> ${esc(b.lab)}`:""}</div>`;
+        const rptList=b.reports&&b.reports.length?b.reports:(b.report?[{label:"Report",url:b.report}]:[]);
+        if(rptList.length){
+          inner+=`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">`;
+          rptList.forEach(r=>{
+            const cleanUrl=r.url.replace(/&amp;/g,"&");
+            inner+=`<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;background:#0073ea;color:#fff;font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;text-decoration:none">📄 ${esc(r.label)} ↗</a>`;
+          });
+          inner+=`</div>`;
+        }
+        if(b.cap) inner+=`<div style="margin-top:8px;padding:8px 11px;background:#fff8e0;border-left:3px solid #fdab3d;border-radius:0 6px 6px 0"><div style="font-size:10px;font-weight:700;color:#b07000;margin-bottom:3px">Corrective Action Plan</div><div>${esc(b.cap)}</div></div>`;
+        if(b.evidence){
+          const evUrl=b.evidence.match(/https?:\/\/[^\s\n"')]+/)?.[0]||"";
+          const evText=b.evidence.replace(/https?:\/\/[^\s\n"')]+/g,"").trim();
+          inner+=`<div style="margin-top:6px;padding:8px 11px;background:#f0f9ff;border-left:3px solid #0073ea;border-radius:0 6px 6px 0">
+            <div style="font-size:10px;font-weight:700;color:#0055bb;margin-bottom:3px">Evidence</div>
+            ${evText?`<div style="font-size:11px;color:#444;margin-bottom:4px">${esc(evText)}</div>`:""}
+            ${evUrl?`<a href="${evUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#0073ea;color:#fff;font-size:11px;font-weight:600;padding:5px 12px;border-radius:6px;text-decoration:none">🔗 View Evidence ↗</a>`:""}
+          </div>`;
+        }
+        if(b.remarks) inner+=`<div style="margin-top:6px;padding:8px 11px;background:#f7f0ff;border-left:3px solid #7c3aed;border-radius:0 6px 6px 0"><div style="font-size:10px;font-weight:700;color:#5b21b6;margin-bottom:3px">Remarks</div><div>${esc(b.remarks)}</div></div>`;
+        if(idx>0) inner+=`</div>`;
+      });
+      inner+=`</div>`;
+      return `<div style="margin-bottom:11px"><div style="font-size:10px;font-weight:700;color:#0073ea;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${yr} Test Results</div>${inner}</div>`;
+    }).join("");
+
+    root.innerHTML=`<div class="modal-wrap" onclick="if(event.target===this)closeModal()">
+      <div class="modal-box" style="max-width:680px">
+        <div style="background:#0073ea;padding:14px 18px;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div><div style="color:#fff;font-weight:700;font-size:14px">${esc(sub.name)}</div><div style="color:rgba(255,255,255,.7);font-size:11px;margin-top:2px">${esc(sub.std)}</div></div>
+          <button onclick="closeModal()" style="background:rgba(255,255,255,.2);border:none;border-radius:6px;color:#fff;width:28px;height:28px;cursor:pointer;font-size:15px;flex-shrink:0">✕</button>
+        </div>
+        <div style="padding:16px 18px">
+          ${monSection}
+          ${fields.filter(([,v])=>v).map(([l,v])=>`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:#0073ea;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${l}</div><div style="font-size:11px;color:#333;line-height:1.65;background:#f7f8fa;border-radius:5px;padding:8px 11px">${esc(v)}</div></div>`).join("")}
+          ${yrsHtml}
+        </div>
+      </div>
+    </div>`;
+  } else if(modal.type==="compliance"){
+    const item=modal.data;
+    const fields=[
+      {label:"Mechanical Testing", value:item.mechTesting, icon:"⚙️"},
+      {label:"Chemical Testing",   value:item.chemTesting,  icon:"🧪"},
+      {label:"Corrosion Test",     value:item.corrTesting,  icon:"🛡️"},
+      {label:"Website Claim",      value:item.meetsClaim,   icon:"✅"},
+    ];
+    root.innerHTML=`<div class="modal-wrap" onclick="if(event.target===this)closeModal()">
+      <div class="modal-box" style="max-width:520px">
+        <div style="background:#0073ea;padding:14px 20px;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <div style="color:#fff;font-weight:700;font-size:14px">📋 Compliance Summary</div>
+            <div style="color:rgba(255,255,255,.75);font-size:11px;margin-top:3px">${esc(item.name)}</div>
+          </div>
+          <button onclick="closeModal()" style="background:rgba(255,255,255,.2);border:none;border-radius:6px;color:#fff;width:28px;height:28px;cursor:pointer;font-size:15px;flex-shrink:0">✕</button>
+        </div>
+        <div style="padding:18px 20px">
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+            ${fields.map(f=>`
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#f7f8fa;border-radius:8px;border:1px solid #e8eaed">
+              <span style="font-size:18px;flex-shrink:0;margin-top:1px">${f.icon}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${f.label}</div>
+                ${f.value
+                  ? `<div>${yb(f.value)}</div>`
+                  : `<span style="font-size:11px;color:#bbb">Not specified</span>`}
+              </div>
+            </div>`).join("")}
+          </div>
+          <div style="border-top:1.5px solid #e8eaed;padding-top:14px">
+            <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Product Website</div>
+            ${item.websiteUrl
+              ? `<div style="background:#f7f8fa;border:1.5px solid #e0e3ea;border-radius:8px;padding:10px 14px;margin-bottom:12px;word-break:break-all;font-size:11px;color:#555;font-family:monospace;line-height:1.5">${esc(item.websiteUrl.replace(/&amp;/g,"&"))}</div>
+                 <div style="display:flex;gap:10px">
+                   <a href="${item.websiteUrl.replace(/&amp;/g,"&")}" target="_blank" rel="noopener noreferrer" onclick="closeModal();window.open('${item.websiteUrl.replace(/&amp;/g,"&").replace(/'/g,"\\'")}','_blank');return false;" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:#0073ea;color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;text-decoration:none">🔗 Open Product Page ↗</a>
+                   <button onclick="navigator.clipboard.writeText('${item.websiteUrl.replace(/&amp;/g,"&").replace(/'/g,"\\'")}').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy Link',1800)})" style="display:flex;align-items:center;gap:6px;background:#f0f2f5;color:#444;font-size:12px;font-weight:600;padding:10px 16px;border-radius:8px;border:1.5px solid #dde0e7;cursor:pointer">📋 Copy Link</button>
+                 </div>`
+              : `<div style="padding:14px;background:#f7f8fa;border-radius:8px;border:1px solid #e8eaed;font-size:11px;color:#aaa;text-align:center">No website link available for this product</div>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  } else if(modal.type==="siblings"){
+    root.innerHTML=`<div class="modal-wrap" onclick="if(event.target===this)closeModal()">
+      <div class="modal-box" style="max-width:420px">
+        <div style="background:#0073ea;padding:14px 20px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between">
+          <div style="color:#fff;font-weight:700;font-size:14px">📦 Sibling SKUs</div>
+          <button onclick="closeModal()" style="background:rgba(255,255,255,.2);border:none;border-radius:6px;color:#fff;width:28px;height:28px;cursor:pointer;font-size:15px">✕</button>
+        </div>
+        <div style="padding:16px 20px">
+          <div style="font-size:11px;color:#888;margin-bottom:10px">Parent SKU: <strong style="color:#333">${esc(modal.parentSku||"—")}</strong></div>
+          <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:8px">${esc(modal.name)} shares tests with:</div>
+          ${modal.siblings.map(s=>`<div style="padding:6px 10px;background:#f7f8fa;border:1px solid #e8eaed;border-radius:6px;font-size:11px;color:#444;margin-bottom:5px">${esc(s)}</div>`).join("")}
+          ${!modal.siblings.length?`<div style="color:#bbb;font-size:11px">No sibling SKUs found</div>`:""}
+        </div>
+      </div>
+    </div>`;
+  } else if(modal.type==="syncPrompt"){
+    root.innerHTML=`<div class="modal-wrap" onclick="if(event.target===this)closeModal()">
+      <div class="modal-box" style="max-width:420px">
+        <div style="background:#0073ea;padding:16px 20px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between">
+          <div style="color:#fff;font-weight:700;font-size:14px">🔄 Check for updates?</div>
+          <button onclick="closeModal()" style="background:rgba(255,255,255,.2);border:none;border-radius:6px;color:#fff;width:28px;height:28px;cursor:pointer;font-size:15px">✕</button>
+        </div>
+        <div style="padding:20px 22px">
+          <p style="font-size:12px;color:#555;margin-bottom:18px;line-height:1.65">You're viewing data synced <strong>${esc(lastSynced)}</strong>. Sync now to pull any recent changes from the Google Sheet?</p>
+          <div style="display:flex;gap:10px">
+            <button onclick="closeModal();triggerSync()" style="flex:1;padding:10px;font-size:13px;font-weight:600;color:#fff;background:#0073ea;border:none;border-radius:8px;cursor:pointer">✓ Sync Now</button>
+            <button onclick="closeModal()" style="padding:10px 18px;font-size:13px;font-weight:600;color:#555;background:#f0f2f5;border:none;border-radius:8px;cursor:pointer">Not now</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  } else if(modal.type==="website"){
+    const {url,name}=modal;
+    root.innerHTML=`<div class="modal-wrap" onclick="if(event.target===this)closeModal()">
+      <div class="modal-box" style="max-width:520px">
+        <div style="background:#0073ea;padding:14px 18px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="color:#fff;font-weight:700;font-size:14px">🔗 Product Website Link</div>
+          <button onclick="closeModal()" style="background:rgba(255,255,255,.2);border:none;border-radius:6px;color:#fff;width:28px;height:28px;cursor:pointer;font-size:15px">✕</button>
+        </div>
+        <div style="padding:20px 22px">
+          <div style="font-size:11px;font-weight:600;color:#444;margin-bottom:6px">${esc(name)}</div>
+          <div style="background:#f7f8fa;border:1.5px solid #e0e3ea;border-radius:8px;padding:12px 14px;margin-bottom:16px;word-break:break-all;font-size:11px;color:#555;font-family:monospace;line-height:1.6">${esc(url.replace(/&amp;/g,"&"))}</div>
+          <div style="display:flex;gap:10px">
+            <a href="${url.replace(/&amp;/g,"&")}" target="_blank" rel="noopener noreferrer" onclick="closeModal();window.open('${url.replace(/&amp;/g,"&").replace(/'/g,"\\'")}','_blank');return false;" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:#0073ea;color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:8px;text-decoration:none">
+              🔗 Open Product Page ↗
+            </a>
+            <button onclick="navigator.clipboard.writeText('${url.replace(/&amp;/g,"&").replace(/'/g,"\\'")}').then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy Link',1800)})" style="display:flex;align-items:center;gap:6px;background:#f0f2f5;color:#444;font-size:12px;font-weight:600;padding:10px 16px;border-radius:8px;border:1.5px solid #dde0e7;cursor:pointer">
+              📋 Copy Link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function toggleGroup(id){ gExp[id]=gExp[id]===false; renderTable(); }
+function toggleItem(id){ iExp[id]=iExp[id]===false; renderTable(); }
+
+// Search: directly update state and re-render board only — input stays focused
+function onSearch(v){ searchQ=v; if(activeTab==="table") renderTable(); else renderMonitoring(); renderToolbar(); }
+
+function tDD(n){
+  openDD=openDD===n?null:n;
+  renderDropdowns();
+}
+document.addEventListener("click",e=>{
+  if(openDD&&!e.target.closest(".tb")&&!e.target.closest(".dp")){
+    openDD=null; renderDropdowns();
+  }
+},{capture:true});
+
+function setFC(v){ fCountry=v; openDD=null; renderAll(); }
+function setFR(v){ fResult=v; openDD=null; renderAll(); }
+function setFP(v){ fPriority=v; openDD=null; renderAll(); }
+function setFG(v){ fGroup=v; openDD=null; renderAll(); }
+function setDateFrom(v){ fDateFrom=v; renderAll(); }
+function setDateTo(v){ fDateTo=v; renderAll(); }
+function clearDates(){ fDateFrom=""; fDateTo=""; openDD=null; renderAll(); }
+function onSkuSelect(v){ fSku=v; renderAll(); }
+
+function toggleRetestNow(itemId, subId, checked){
+  const key=itemId+"_"+subId;
+  saveRetestDecision(key, checked?"now":"");
+  renderAll();
+}
+function toggleRetestNext(itemId, subId, checked){
+  const key=itemId+"_"+subId;
+  saveRetestDecision(key, checked?"next":"");
+  renderAll();
+}
+function setSort(c){ sortS=sortS?.col===c?{col:c,dir:sortS.dir==="asc"?"desc":"asc"}:{col:c,dir:"asc"}; openDD=null; renderAll(); }
+function clearSort(){ sortS=null; openDD=null; renderAll(); }
+
+function viewInMonitoring(parentSku){
+  monFocusParent=parentSku;
+  monSearchQ=""; monFilterStatus="ALL"; monFilterDecision="ALL";
+  switchTab('monitoring');
+}
+function clearMonFocus(){ monFocusParent=""; renderMonitoring(); }
+function clearMonFilters(){ monSearchQ=""; monFilterStatus="ALL"; monFilterDecision="ALL"; monFocusParent=""; monFilterPriority="ALL"; renderMonitoring(); }
+
+function exportMonitoringExcel(){
+  if(typeof XLSX==="undefined"){ alert("Excel library not loaded. Please check your internet connection."); return; }
+  const data=[["Product Group","SKU","Siblings","Priority","Test Name","Last Tested","Next Due Date","Days Remaining","Status","Decision","Target Year","Defer Date"]];
+  const allItems=[];
+  GROUPS.forEach(g=>g.items.forEach(i=>allItems.push({g,i})));
+  const byParent={};
+  allItems.forEach(({g,i})=>{const k=i.parentSku||i.rowId;if(!byParent[k])byParent[k]=[];byParent[k].push({g,i});});
+  Object.values(byParent).forEach(siblings=>{
+    const de=siblings.find(({i})=>i.subs.some(s=>s.p24.length||s.p25.length||s.p26.length));
+    if(!de) return;
+    const {g,i:donor}=de;
+    const sibNames=siblings.filter(({i})=>i.id!==donor.id).map(({i})=>i.name).join(", ");
+    const subs=donor.subs.filter(s=>(s.p24&&s.p24.length>0)||(s.p25&&s.p25.length>0)||(s.p26&&s.p26.length>0));
+    subs.forEach(s=>{
+      const dec=getRetestDecision(donor.id,s.id);
+      const sLast=latestTestDate(s);
+      const sExp=calcExpiry(s,donor.id);
+      const sMs=monStatus(s,donor.id);
+      const sDays=sExp?Math.round((sExp-new Date())/86400000):null;
+      const lastYear=sLast?sLast.getFullYear():null;
+      const addYears=lastYear&&lastYear<=2024?2:1;
+      const retestYear=lastYear?lastYear+addYears:"";
+      const standardDue=sLast?new Date(new Date(sLast).setFullYear(sLast.getFullYear()+addYears)):null;
+      const deferDate=standardDue?new Date(new Date(standardDue).setMonth(standardDue.getMonth()+12)):null;
+      data.push([g.title,donor.name,sibNames,donor.prioritySku||"",s.name,sLast?fmtD(sLast):"",sExp?fmtD(sExp):"",sDays!==null?sDays:"",sMs==="overdue"?"Retest Due":sMs==="due_soon"?"Due Soon":sMs==="ok"?"On Track":sMs==="deferred"?"Deferred":"No Test",dec==="now"?"Retest Now":dec==="next"?"Defer":"",retestYear,deferDate?fmtD(deferDate):""]);
+    });
+  });
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"]=[{wch:20},{wch:22},{wch:30},{wch:10},{wch:35},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:10},{wch:14}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Monitoring");
+  downloadXLSX(wb,"Compliance-Monitoring-"+new Date().toISOString().slice(0,10)+".xlsx");
+}
+function switchTab(t){
+  activeTab=t;
+  document.getElementById("tab-table").className="tab-btn"+(t==="table"?" active":"");
+  document.getElementById("tab-monitoring").className="tab-btn"+(t==="monitoring"?" active":"");
+  document.getElementById("tab-expense").className="tab-btn"+(t==="expense"?" active":"");
+  const kpiEl=document.getElementById("kpi-section");
+  if(kpiEl) kpiEl.style.display=t==="table"?"":"none";
+  const tbEl=document.getElementById("toolbar-wrap");
+  if(tbEl) tbEl.style.display=t==="table"?"flex":"none";
+  if(t==="table") renderTable();
+  else if(t==="monitoring") renderMonitoring();
+  else renderExpense();
+}
+
+function openModal(m){ modal=m; renderModals(); }
+function closeModal(){ modal=null; renderModals(); }
+
+function openWebsiteModal(itemId){
+  let found=null;
+  GROUPS.forEach(g=>g.items.forEach(i=>{ if(i.id===itemId) found=i; }));
+  if(found&&found.websiteUrl) openModal({type:"website",url:found.websiteUrl,name:found.name});
+}
+
+function openComplianceModal(itemId){
+  let found=null;
+  GROUPS.forEach(g=>g.items.forEach(i=>{ if(i.id===itemId) found=i; }));
+  if(found) openModal({type:"compliance",data:found});
+}
+
+function openDetail(sid,iid,gid){
+  const g=GROUPS.find(x=>x.id===gid);
+  const item=g&&g.items.find(x=>x.id===iid);
+  const sub=item&&item.subs.find(x=>x.id===sid);
+  if(sub) openModal({type:"detail",data:sub});
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+(function boot(){
+  try{
+    if(window.__PRELOADED_GROUPS__){
+      GROUPS=window.__PRELOADED_GROUPS__;
+      lastSynced=window.__PRELOADED_SYNCED__||"";
+      if(window.__PRELOADED_DECISIONS__){
+        retestDecisions=window.__PRELOADED_DECISIONS__;
+        localStorage.setItem(LS_RETEST,JSON.stringify(retestDecisions));
+      }
+      GROUPS.forEach(g=>{gExp[g.id]=true;g.items.forEach(i=>{iExp[i.id]=false;});});
+      const ti=GROUPS.reduce((a,g)=>a+g.items.length,0);
+      const ts=GROUPS.reduce((a,g)=>a+g.items.reduce((b,i)=>b+i.subs.length,0),0);
+      setSyncUI("done","Compliance Dashboard",`Last synced: ${lastSynced} · ${ti} products · ${ts} test types`,100);
+      renderAll();
+      return;
+    }
+    // Otherwise load from localStorage (this browser's last live sync)
+    const cached=localStorage.getItem(LS_CACHE);
+    const synced=localStorage.getItem(LS_SYNCED);
+    if(cached&&synced){
+      GROUPS=JSON.parse(cached);
+      lastSynced=fmtDate(synced);
+      GROUPS.forEach(g=>{gExp[g.id]=true;g.items.forEach(i=>{iExp[i.id]=false;});});
+      const ti=GROUPS.reduce((a,g)=>a+g.items.length,0);
+      const ts=GROUPS.reduce((a,g)=>a+g.items.reduce((b,i)=>b+i.subs.length,0),0);
+      // Amber "stale" state — this is cached data, not yet confirmed fresh this session.
+      setSyncUI("stale","Compliance Dashboard (cached)",`Last synced: ${lastSynced} · ${ti} products · ${ts} test types — click Re-sync for the latest`,0);
+      setTimeout(()=>promptSync(), 900); // let the page render first, then ask
+    }
+  }catch(e){ GROUPS=[]; }
+  renderAll();
+})();
+</script>
+</body>
+</html>
